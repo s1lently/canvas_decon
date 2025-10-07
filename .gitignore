@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Personal information
+cookies.json
+account_info.json
+personal_info.json
+course.json
+
+# Generated files
+*.html
+post_exp.txt
+
+# PDF files
+bisc_pdfs/
+
+# Mac
+.DS_Store

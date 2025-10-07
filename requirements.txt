@@ -1,0 +1,13 @@
+flask
+pyotp
+requests
+beautifulsoup4
+html2text
+lxml
+google-generativeai
+google-genai
+markdownify
+selenium
+python-docx
+pypandoc
+pillow

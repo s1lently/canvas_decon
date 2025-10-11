@@ -1,4 +1,4 @@
-import json, time, random
+import json, time, random, sys, os
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
@@ -7,7 +7,15 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException
-import getTotp # Import the new library
+
+# Add project root to path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import config
+
+try:
+    from . import getTotp
+except ImportError:
+    import getTotp
 
 def human_type(element, text):
     for char in text:
@@ -17,7 +25,7 @@ def human_type(element, text):
 def human_click(driver, element):
     ActionChains(driver).move_to_element(element).pause(random.uniform(0.1, 0.3)).click().perform()
 
-def get_cookies(account, password, otp_keys_data):
+def get_cookies(account, password, otp_key):
     options = webdriver.ChromeOptions()
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
@@ -26,13 +34,13 @@ def get_cookies(account, password, otp_keys_data):
     try:
         driver.get("https://psu.instructure.com/login")
         wait = WebDriverWait(driver, 30)
-        
+
         human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='email']"))), account)
         human_click(driver, driver.find_element(By.CSS_SELECTOR, "input[type='submit']"))
-        
+
         human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='password']"))), password)
         human_click(driver, driver.find_element(By.CSS_SELECTOR, "input[type='submit']"))
-        
+
         start_time = time.time()
         while time.time() - start_time < 30:
             if "I can't use my Microsoft Authenticator" in driver.page_source:
@@ -52,7 +60,7 @@ def get_cookies(account, password, otp_keys_data):
         
         sso_success = False
         for attempt in range(3):
-            token = getTotp.generate_token(otp_keys_data) # Pass the key data directly
+            token = getTotp.generate_token(otp_key) # Pass the key string directly
             if not token:
                 time.sleep(5)
                 continue
@@ -92,3 +100,41 @@ def get_cookies(account, password, otp_keys_data):
         return None
     finally:
         driver.quit()
+
+def main():
+    """Main function to get cookies and save to cookies.json"""
+    # Read account info
+    try:
+        with open(config.ACCOUNT_INFO_FILE, 'r', encoding='utf-8') as f:
+            account_info = json.load(f)
+    except FileNotFoundError:
+        print(f"Error: {config.ACCOUNT_INFO_FILE} not found")
+        return
+    except json.JSONDecodeError:
+        print(f"Error: Invalid JSON in {config.ACCOUNT_INFO_FILE}")
+        return
+
+    # Extract credentials
+    account = account_info.get('account')
+    password = account_info.get('password')
+    otp_key = account_info.get('otp_key')
+
+    if not all([account, password, otp_key]):
+        print("Error: Missing required fields in account_info.json (account, password, otp_key)")
+        return
+
+    print(f"Logging in with account: {account}")
+
+    # Get cookies
+    cookies = get_cookies(account, password, otp_key)
+
+    if cookies:
+        # Save cookies to file
+        with open(config.COOKIES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cookies, f, indent=2)
+        print(f"Cookies saved successfully to {config.COOKIES_FILE}")
+    else:
+        print("Failed to get cookies")
+
+if __name__ == "__main__":
+    main()

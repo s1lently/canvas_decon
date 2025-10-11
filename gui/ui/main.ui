@@ -1,0 +1,557 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Canvas LMS Automation</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainVerticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="topBarLayout">
+      <item>
+       <layout class="QVBoxLayout" name="userInfoLayout">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="emailLabel">
+          <property name="text">
+           <string>Email: --</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 13px; color: #aaa;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="nameLabel">
+          <property name="text">
+           <string>Name: --</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 13px; color: #aaa;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="idLabel">
+          <property name="text">
+           <string>ID: --</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 13px; color: #aaa;</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="topSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="rightTopLayout">
+        <item>
+         <layout class="QHBoxLayout" name="statusIndicatorLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="accountStatusLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="accountStatusLabel">
+            <property name="text">
+             <string>Account</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string>font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="accountIndicator" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="cookieStatusLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="cookieStatusLabel">
+            <property name="text">
+             <string>Cookie</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string>font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="cookieIndicator" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="todosStatusLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="todosStatusLabel">
+            <property name="text">
+             <string>TODOs</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string>font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="todosIndicator" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="networkStatusLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="networkStatusLabel">
+            <property name="text">
+             <string>Network</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string>font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="networkIndicator" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QVBoxLayout" name="coursesStatusLayout">
+          <property name="spacing">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="coursesStatusLabel">
+            <property name="text">
+             <string>Courses</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+            <property name="styleSheet">
+             <string>font-size: 11px;</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QWidget" name="coursesIndicator" native="true">
+            <property name="minimumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>12</width>
+              <height>12</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          </layout>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="filterLayout">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="filterLabel">
+          <property name="text">
+           <string>Filters:</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; font-weight: bold; margin-right: 8px;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="filterHomework">
+          <property name="text">
+           <string>● Homework</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; color: #eab308;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="filterQuiz">
+          <property name="text">
+           <string>● Quiz</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; color: #a855f7;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="filterDiscussion">
+          <property name="text">
+           <string>● Discussion</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; color: #3b82f6;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="filterAutomatable">
+          <property name="text">
+           <string>● Automatable</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; color: #ef4444;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="filterSpacer">
+          <property name="orientation">
+           <enum>Qt::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+       </item>
+      </layout>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="buttonBarLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="loginBtn">
+        <property name="text">
+         <string>Login</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="getCookieBtn">
+        <property name="text">
+         <string>gCookie</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="getTodoBtn">
+        <property name="text">
+         <string>gTODO</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="getCourseBtn">
+        <property name="text">
+         <string>gCourse</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cleanBtn">
+        <property name="text">
+         <string>Clean</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="automationTopBtn">
+        <property name="text">
+         <string>Automation</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="buttonSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="mainContentLayout">
+      <property name="spacing">
+       <number>8</number>
+      </property>
+      <item>
+       <layout class="QVBoxLayout" name="categoryColumnLayout">
+        <item>
+         <widget class="QListWidget" name="categoryList">
+          <property name="minimumWidth">
+           <number>120</number>
+          </property>
+          <property name="maximumWidth">
+           <number>120</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="openFolderBtn">
+          <property name="text">
+           <string>Open Folder</string>
+          </property>
+          <property name="minimumHeight">
+           <number>32</number>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="automationBtn">
+          <property name="text">
+           <string>Automation</string>
+          </property>
+          <property name="minimumHeight">
+           <number>32</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QListWidget" name="itemList">
+        <property name="minimumWidth">
+         <number>250</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="detailView">
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+        <property name="placeholderText">
+         <string>Select an item to view details...</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="consoleTabWidget">
+      <property name="minimumHeight">
+       <number>200</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="defaultTab">
+       <attribute name="title">
+        <string>Main</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="defaultTabLayout">
+        <item>
+         <widget class="QTextEdit" name="consoleOutput">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>Command output will appear here...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

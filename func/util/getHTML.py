@@ -1,7 +1,11 @@
 import requests, json, re
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import config
 
 def get_html(path):
-    with open('cookies.json') as f:
+    with open(config.COOKIES_FILE) as f:
         cookies = {c['name']: c['value'] for c in json.load(f)}
     
     headers = {

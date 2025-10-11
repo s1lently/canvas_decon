@@ -4,6 +4,9 @@ from selenium.webdriver.chrome.options import Options
 from markdownify import markdownify as md
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import config
 
 def simplify_name(name):
     return ' '.join(name.split()[:2]) if len(name.split()) >= 2 else name.split()[0]
@@ -52,9 +55,9 @@ def convert_to_md(course_name, course_full_name, tab_name, url, html_file, md_fi
         return f"✗ MD: {course_name}/{tab_name}: {str(e)[:30]}"
 
 def main():
-    with open('cookies.json') as f:
+    with open(config.COOKIES_FILE) as f:
         cookies_list = json.load(f)
-    with open('course.json', encoding='utf-8') as f:
+    with open(config.COURSE_FILE, encoding='utf-8') as f:
         data = json.load(f)
     
     base_url = data['base_url']

@@ -1,0 +1,593 @@
+[
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH5/19",
+    "due_date": "2025-10-15T03:59:00Z",
+    "points_possible": 32.0,
+    "redirect_url": "/courses/2405803/quizzes/5363419",
+    "assignment_details": {
+      "name": null,
+      "desc": "<p>&nbsp;This quiz is from Chapter 5, and 19.&nbsp; In addition to the standard CANVAS quiz, a pdf file also uploaded, which you can download and work on problems.</p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"Quiz_CH5-19-1 (accessible).pdf\" href=\"https://psu.instructure.com/courses/2405803/files/180074946?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://psu.instructure.com/api/v1/courses/2405803/files/180074946\" data-api-returntype=\"File\">Chapters 5 and 19 Quiz</a></p>",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": [
+        {
+          "file_id": "180074946",
+          "download_url": "https://psu.instructure.com/courses/2405803/files/180074946/download?download_frd=1",
+          "filename": "Quiz_CH5-19-1 (accessible).pdf",
+          "local_path": "c:\\Users\\mc282\\Downloads\\niubiaaaa\\todo_files\\Homework_CH5_19_20251015_035900\\Quiz_CH5-19-1 (accessible).pdf"
+        }
+      ],
+      "quiz_metadata": {
+        "locked_for_user": false,
+        "unlock_at": "2025-09-25T04:00:00Z",
+        "lock_at": "2025-10-15T03:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 2,
+        "time_limit": 50,
+        "question_count": 32
+      },
+      "folder": "Homework_CH5_19_20251015_035900"
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Assignment 1 NLP in Practice",
+    "due_date": "2025-10-15T03:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2415607/assignments/17252974",
+    "assignment_details": {
+      "name": "Assignment 1 NLP in Practice",
+      "desc": "<ol>\n<li><strong>NLP in Practice (10 points):</strong>&nbsp;Use the&nbsp;<a class=\"external\" href=\"https://text2data.com/Demo?utm_source=chatgpt.com\" target=\"_blank\"><span>Sentiment Analysis Demo</span><span class=\"external_link_icon\" role=\"presentation\"><span class=\"screenreader-only\">Links to an external site.</span></span></a>&nbsp;to analyze a positive and a negative product review. Submit a brief report with screenshots showing the results. Did the tool correctly identify the sentiment?</li>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": true,
+      "files": null
+    }
+  },
+  {
+    "course_name": "MATH 230",
+    "name": "Homework 7",
+    "due_date": "2025-10-16T19:05:00Z",
+    "points_possible": 40.0,
+    "redirect_url": "/courses/2404351/assignments/17680635",
+    "assignment_details": {
+      "name": "Homework 7",
+      "desc": "<p><a class=\"instructure_file_link instructure_scribd_file auto_open\" title=\"HW 7.docx\" href=\"https://psu.instructure.com/courses/2404351/files/182881877?wrap=1\" target=\"_blank\" data-canvas-previewable=\"false\" data-api-endpoint=\"https://psu.instructure.com/api/v1/courses/2404351/files/182881877\" data-api-returntype=\"File\">HW 7.docx</a></p>",
+      "type": [
+        "on_paper"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": [
+        {
+          "file_id": "182881877",
+          "download_url": "https://psu.instructure.com/courses/2404351/files/182881877/download?download_frd=1",
+          "filename": "HW 7.docx",
+          "local_path": "c:\\Users\\mc282\\Downloads\\niubiaaaa\\todo_files\\Homework 7_20251016_190500\\HW 7.docx"
+        }
+      ],
+      "folder": "Homework 7_20251016_190500"
+    }
+  },
+  {
+    "course_name": "MATH 230",
+    "name": "Midterm Exam",
+    "due_date": "2025-10-16T20:20:00Z",
+    "points_possible": 100.0,
+    "redirect_url": "/courses/2404351/assignments/17686722",
+    "assignment_details": {
+      "name": "Midterm Exam",
+      "desc": "<p><span style=\"font-family: inherit; font-size: 1rem;\">C</span><strong style=\"font-family: inherit; font-size: 1rem;\">overs sections 11.1-11.6, 12.1-12.5, 13.1, and 13.3-13.7</strong></p>",
+      "type": [
+        "on_paper"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Assignment 2 Drop Box",
+    "due_date": "2025-10-20T03:59:59Z",
+    "points_possible": 20.0,
+    "redirect_url": "/courses/2415607/assignments/17246775",
+    "assignment_details": {
+      "name": "Assignment 2 Drop Box",
+      "desc": "<ol>\n<li><strong>Case Study: AI Perception or Robotics (20 points):</strong>&nbsp;Choose ONE topic (e.g., facial recognition, a warehouse robot). Write a summary (250-300 words) answering: What problem does it solve? What are its key AI features? What is one major challenge it faces?</li>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Module 5 Discussion: ",
+    "due_date": "2025-10-25T03:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2415607/discussion_topics/16778803",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "discussion_topic"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH6",
+    "due_date": "2025-10-27T03:59:00Z",
+    "points_possible": 31.0,
+    "redirect_url": "/courses/2405803/quizzes/5363417",
+    "assignment_details": {
+      "name": null,
+      "desc": "<p>Homework from Chapter 6.</p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"Quiz_CH6-2 (accessible).pdf\" href=\"https://psu.instructure.com/courses/2405803/files/180075739?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://psu.instructure.com/api/v1/courses/2405803/files/180075739\" data-api-returntype=\"File\">Quiz_CH6-2.pdf</a></p>",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": [
+        {
+          "file_id": "180075739",
+          "download_url": "https://psu.instructure.com/courses/2405803/files/180075739/download?download_frd=1",
+          "filename": "Quiz_CH6-2 (accessible).pdf",
+          "local_path": "c:\\Users\\mc282\\Downloads\\niubiaaaa\\todo_files\\Homework_CH6_20251027_035900\\Quiz_CH6-2 (accessible).pdf"
+        }
+      ],
+      "quiz_metadata": {
+        "locked_for_user": false,
+        "unlock_at": "2025-10-03T04:00:00Z",
+        "lock_at": "2025-10-27T03:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 3,
+        "time_limit": 60,
+        "question_count": 31
+      },
+      "folder": "Homework_CH6_20251027_035900"
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Discussion Prompt 2: Muscle Contraction",
+    "due_date": "2025-10-27T03:59:59Z",
+    "points_possible": 20.0,
+    "redirect_url": "/courses/2418560/discussion_topics/16878396",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "discussion_topic"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Case 1 Group Study Upload ",
+    "due_date": "2025-10-27T03:59:59Z",
+    "points_possible": 25.0,
+    "redirect_url": "/courses/2418560/assignments/17474476",
+    "assignment_details": {
+      "name": "Case 1 Group Study Upload ",
+      "desc": null,
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Case 1 Individual Response - Osteoporosis",
+    "due_date": "2025-10-27T03:59:59Z",
+    "points_possible": 50.0,
+    "redirect_url": "/courses/2418560/assignments/17474477",
+    "assignment_details": {
+      "name": "Case 1 Individual Response - Osteoporosis",
+      "desc": null,
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": " DropBox Module 5 Assignment 1",
+    "due_date": "2025-10-29T03:59:59Z",
+    "points_possible": 15.0,
+    "redirect_url": "/courses/2415607/assignments/17246776",
+    "assignment_details": {
+      "name": " DropBox Module 5 Assignment 1",
+      "desc": "<ol>\n<li><strong>Use an AI Writing Assistant (15 Pts.)<br></strong>Use an AI writing tool such as ChatGPT, Grammarly, or Notion AI to help you draft an email, paragraph, or short article.<br>Submit: The AI-generated content and a reflection (100–150 words) answering:</li>\n</ol>\n<ol>\n<ul>\n<li>What did the AI do well?</li>\n<li>What did you need to edit or change?</li>\n<li>Would you use this tool again? Why or why not?</li>\n</ul>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "CMPSC 131",
+    "name": "CH 5 Quiz",
+    "due_date": "2025-10-31T03:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2419722/quizzes/5315398",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-10-23T04:00:00Z",
+        "lock_at": "2025-10-31T03:59:59Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 1,
+        "time_limit": 15,
+        "question_count": 10
+      }
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": " DropBox Module 5 Assignment 2 ",
+    "due_date": "2025-11-03T04:59:59Z",
+    "points_possible": 15.0,
+    "redirect_url": "/courses/2415607/assignments/17252975",
+    "assignment_details": {
+      "name": " DropBox Module 5 Assignment 2 ",
+      "desc": "<p><strong>AI-Enhanced Creativity Project (15 pts)<br></strong><span>Use an AI tool (such as an AI art generator, music generator, or language model) to create an original piece of content. Reflect on the collaborative process.</span></p>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Lecture Quiz # 2: Chapters 4, 5, and 6",
+    "due_date": "2025-11-03T04:59:59Z",
+    "points_possible": 22.0,
+    "redirect_url": "/courses/2418560/quizzes/5399420",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-10-31T13:00:00Z",
+        "lock_at": null,
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 1,
+        "time_limit": 15,
+        "question_count": 10
+      }
+    }
+  },
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH7",
+    "due_date": "2025-11-05T04:59:00Z",
+    "points_possible": 35.0,
+    "redirect_url": "/courses/2405803/quizzes/5363413",
+    "assignment_details": {
+      "name": null,
+      "desc": "<p>Homework from Chapter 7.</p>\n<p><a class=\"instructure_file_link instructure_scribd_file inline_disabled\" title=\"Quiz_CH7-2 (accessible).pdf\" href=\"https://psu.instructure.com/courses/2405803/files/180075925?wrap=1\" target=\"_blank\" data-api-endpoint=\"https://psu.instructure.com/api/v1/courses/2405803/files/180075925\" data-api-returntype=\"File\">Chapter 7 Quiz</a></p>",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": [
+        {
+          "file_id": "180075925",
+          "download_url": "https://psu.instructure.com/courses/2405803/files/180075925/download?download_frd=1",
+          "filename": "Quiz_CH7-2 (accessible).pdf",
+          "local_path": "c:\\Users\\mc282\\Downloads\\niubiaaaa\\todo_files\\Homework_CH7_20251105_045900\\Quiz_CH7-2 (accessible).pdf"
+        }
+      ],
+      "quiz_metadata": {
+        "locked_for_user": false,
+        "unlock_at": "2025-10-08T14:00:00Z",
+        "lock_at": "2025-11-05T04:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 3,
+        "time_limit": 60,
+        "question_count": 35
+      },
+      "folder": "Homework_CH7_20251105_045900"
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Module6 Discussion: ",
+    "due_date": "2025-11-08T04:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2415607/discussion_topics/16778802",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "discussion_topic"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": " DropBox Module 6 Asignment 1",
+    "due_date": "2025-11-12T04:59:59Z",
+    "points_possible": 20.0,
+    "redirect_url": "/courses/2415607/assignments/17246777",
+    "assignment_details": {
+      "name": " DropBox Module 6 Asignment 1",
+      "desc": "<ol>\n<li><strong>AI Bias Case Study (20 points):</strong>&nbsp;Analyze a real-world case of algorithmic bias (e.g., hiring tools, facial recognition). In 250-300 words, explain the application, the bias, who was affected, the likely source, and a possible mitigation.</li>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": " DropBox Module 6 Assignment 2",
+    "due_date": "2025-11-17T04:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2415607/assignments/17252976",
+    "assignment_details": {
+      "name": " DropBox Module 6 Assignment 2",
+      "desc": "<ol>\n<li><strong>Ethical Dilemma Analysis (10 points):</strong>&nbsp;Analyze a scenario about using AI surveillance in public parks. Advise the city, addressing the conflict between safety and privacy, and suggest one specific safeguard. (150-200 words).</li>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Module 7 Discussion",
+    "due_date": "2025-11-24T04:59:59Z",
+    "points_possible": 10.0,
+    "redirect_url": "/courses/2415607/discussion_topics/16778801",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "discussion_topic"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Lecture Quiz # 3: Chapters 7, 8, and 10",
+    "due_date": "2025-11-24T04:59:59Z",
+    "points_possible": 15.0,
+    "redirect_url": "/courses/2418560/quizzes/5399437",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-11-21T19:30:00Z",
+        "lock_at": null,
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 1,
+        "time_limit": 15,
+        "question_count": 10
+      }
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Assessing Your Risk of Type 2 Diabetes - Self-reflection 2",
+    "due_date": "2025-11-24T04:59:59Z",
+    "points_possible": 15.0,
+    "redirect_url": "/courses/2418560/assignments/17474474",
+    "assignment_details": {
+      "name": "Assessing Your Risk of Type 2 Diabetes - Self-reflection 2",
+      "desc": null,
+      "type": [
+        "online_text_entry",
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH10",
+    "due_date": "2025-12-01T04:59:00Z",
+    "points_possible": 50.0,
+    "redirect_url": "/courses/2405803/quizzes/5363418",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-10-24T04:00:00Z",
+        "lock_at": "2025-12-01T04:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 3,
+        "time_limit": null,
+        "question_count": 50
+      }
+    }
+  },
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH8",
+    "due_date": "2025-12-08T04:59:00Z",
+    "points_possible": 44.0,
+    "redirect_url": "/courses/2405803/quizzes/5363415",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-11-04T05:00:00Z",
+        "lock_at": "2025-12-08T04:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 3,
+        "time_limit": null,
+        "question_count": 44
+      }
+    }
+  },
+  {
+    "course_name": "BISC 4",
+    "name": "Discussion Prompt 3: Blood ",
+    "due_date": "2025-12-08T04:59:59Z",
+    "points_possible": 30.0,
+    "redirect_url": "/courses/2418560/discussion_topics/16878395",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "discussion_topic"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "A-I 100",
+    "name": "Final Project: Emerging AI Tool Critical Review",
+    "due_date": "2025-12-13T04:59:59Z",
+    "points_possible": 30.0,
+    "redirect_url": "/courses/2415607/assignments/17247439",
+    "assignment_details": {
+      "name": "Final Project: Emerging AI Tool Critical Review",
+      "desc": "<ol>\n<li><strong>Final Project: Emerging AI Tool Critical Review (30 points):</strong>&nbsp;Choose a modern AI tool (e.g., ChatGPT, Midjourney, Runway ML). Write a 400-word critical review covering its overview, your hands-on experience (screenshots encouraged), opportunities, risks, and future potential.</li>\n</ol>",
+      "type": [
+        "online_upload"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null
+    }
+  },
+  {
+    "course_name": "CHEM 110",
+    "name": "Homework_CH9",
+    "due_date": "2025-12-15T04:59:00Z",
+    "points_possible": 14.0,
+    "redirect_url": "/courses/2405803/quizzes/5363414",
+    "assignment_details": {
+      "name": null,
+      "desc": "",
+      "type": [
+        "online_quiz"
+      ],
+      "is_quiz": false,
+      "quiz_id": null,
+      "submitted": false,
+      "files": null,
+      "quiz_metadata": {
+        "locked_for_user": true,
+        "unlock_at": "2025-12-01T05:00:00Z",
+        "lock_at": "2025-12-15T04:59:00Z",
+        "quiz_type": "assignment",
+        "published": true,
+        "allowed_attempts": 2,
+        "time_limit": 30,
+        "question_count": 14
+      }
+    }
+  }
+]

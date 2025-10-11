@@ -1,0 +1,25 @@
+# 白名单配置 - clean.py 保留的文件和文件夹
+# 一行一个路径，支持相对路径和通配符
+
+# 保留的文件夹
+.git/
+.claude/
+todo_files/
+misc/
+gui/
+func/
+login/
+
+# 保留的配置文件
+account_info.json
+personal_info.json
+cookies.json
+.gitignore
+
+# 保留的文档
+CLAUDE.md
+README.md
+COMPLETE_QUIZ_WORKFLOW.md
+requirements.txt
+
+# 保留所有 .py 文件（通过扩展名规则）

@@ -1,7 +1,11 @@
 import requests, json
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import config
 
 def get_data(endpoint=''):
-    with open('cookies.json') as f:
+    with open(config.COOKIES_FILE) as f:
         cookies = {c['name']: c['value'] for c in json.load(f)}
     url = f"https://psu.instructure.com/api/v1/courses{endpoint}"
     return requests.get(url, cookies=cookies, headers={'Accept': 'application/json'}).json()

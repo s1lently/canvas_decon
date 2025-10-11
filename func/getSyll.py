@@ -1,6 +1,9 @@
 import requests, json, os, re, logging, html2text
 from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import config
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', handlers=[
     logging.FileHandler('syllabus_extractor.log', 'w', encoding='utf-8'),
@@ -17,7 +20,7 @@ class SyllabusExtractor:
         self.course_id, self.course_name = course_id, simple_course_name
         self.log_prefix, self.successes = f"[{self.course_name}]", []
         self.base_url, self.api_base = "https://psu.instructure.com", "https://psu.instructure.com/api/v1"
-        with open('cookies.json') as f: self.cookies = {c['name']: c['value'] for c in json.load(f)}
+        with open(config.COOKIES_FILE) as f: self.cookies = {c['name']: c['value'] for c in json.load(f)}
         self.save_dir = f"{self.course_id}/syll"
         os.makedirs(self.save_dir, exist_ok=True)
 
@@ -94,7 +97,9 @@ def run_extraction_for_course(course):
 
 if __name__ == '__main__':
     try:
-        with open('course.json', 'r', encoding='utf-8') as f: courses = json.load(f)
+        with open(config.COURSE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            courses = data.get('courses', data) if isinstance(data, dict) else data
         logger.info(f"Found {len(courses)} courses to process.")
         with ThreadPoolExecutor(max_workers=5) as executor:
             results = [r for r in executor.map(run_extraction_for_course, courses) if r[0]]

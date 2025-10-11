@@ -1,4 +1,4 @@
-import getCookie
+from login import getCookie
 import json
 
 def main():
@@ -9,7 +9,7 @@ def main():
     - 将获取到的cookies打印到控制台
     """
     print("正在读取配置文件...")
-    with open('account_info.json', 'r') as f:
+    with open('../account_info.json', 'r') as f:
         config = json.load(f)
     
     account = config['account']

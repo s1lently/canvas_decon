@@ -1,11 +1,15 @@
 from selenium import webdriver
 import json
 import time
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+import config
 
 driver = webdriver.Chrome()
 
 try:
-    with open('cookies.json', 'r') as f:
+    with open(config.COOKIES_FILE, 'r') as f:
         cookies = json.load(f)
     
     for cookie in cookies:

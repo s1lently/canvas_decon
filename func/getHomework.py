@@ -4,12 +4,20 @@ from html import unescape
 import google.generativeai as genai
 from pathlib import Path
 
+# Add parent directory to path for config import
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import config
+
 # Configuration
 TARGET_ASSIGNMENT_URL = "https://psu.instructure.com/courses/2418560/assignments/17474475"
-COOKIES_FILE, OUTPUT_DIR, SUBMISSION_DIR = 'cookies.json', 'homework_res', 'homework_res/submission'
-DETAILS_FILE, ANSWER_FILE = f'{OUTPUT_DIR}/assignment_details.json', f'{OUTPUT_DIR}/answer.md'
-GEMINI_API_KEY, PDF_DIR = "AIzaSyBZTx5UDH7pxyYZUgpDzKHRU25FWoPIA8I", 'bisc_pdfs'
-PERSONAL_INFO_FILE = 'personal_info.json'
+COOKIES_FILE = config.COOKIES_FILE
+OUTPUT_DIR = config.OUTPUT_DIR
+SUBMISSION_DIR = config.SUBMISSION_DIR
+DETAILS_FILE = os.path.join(OUTPUT_DIR, 'assignment_details.json')
+ANSWER_FILE = os.path.join(OUTPUT_DIR, 'answer.md')
+GEMINI_API_KEY = config.GEMINI_API_KEY
+PDF_DIR = config.PDF_DIR
+PERSONAL_INFO_FILE = config.PERSONAL_INFO_FILE
 
 def get_homework_details():
     path = urlparse(TARGET_ASSIGNMENT_URL).path.split('/')
@@ -227,8 +235,7 @@ def submit_to_canvas():
     except Exception as e: print(f"  ❌ Failed: {e}") or False
 
 def main():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    os.makedirs(SUBMISSION_DIR, exist_ok=True)
+    config.ensure_dirs()
     
     # Clean submission folder from previous runs
     for f in Path(SUBMISSION_DIR).glob('*'):

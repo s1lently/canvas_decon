@@ -11,9 +11,15 @@ course.json
 # Generated files
 *.html
 post_exp.txt
+todos.json
+todo_files/
 
 # PDF files
 bisc_pdfs/
 
-# Mac
+# Claude Code
+.claude/
+
+# Mac/Windows
 .DS_Store
+Thumbs.db

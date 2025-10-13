@@ -1,232 +1,172 @@
-"""
-UI Interaction Logic for Canvas LMS Automation
-Handles button clicks and operations, separated from UI definition
-"""
-import os
-import sys
-import json
-import threading
-import requests
-
-# Add parent directory to path to import config
+"""UI Interaction Logic for Canvas LMS Automation"""
+import os, sys, json, threading, requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
 
-
-# ==================== Helper Functions ====================
-
-def _create_console_tab(tab_widget, tab_name):
-    """Create a new console tab and return the console output widget"""
+def _create_console_tab(tw, name):
+    """Create console tab"""
     from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit
+    tab, layout, console = QWidget(), QVBoxLayout(), QTextEdit()
+    console.setReadOnly(True)
+    layout.addWidget(console)
+    tab.setLayout(layout)
+    tw.setCurrentIndex(tw.addTab(tab, name))
+    return console
 
-    new_tab = QWidget()
-    layout = QVBoxLayout()
-    console_output = QTextEdit()
-    console_output.setReadOnly(True)
-    layout.addWidget(console_output)
-    new_tab.setLayout(layout)
-
-    index = tab_widget.addTab(new_tab, tab_name)
-    tab_widget.setCurrentIndex(index)
-
-    return console_output
-
-
-def _run_in_thread(func, console_output, task_name, on_success=None):
-    """Execute a function in a daemon thread with console output"""
-    console_output.append(f"[INFO] {task_name} thread started")
-
+def _run_in_thread(func, console, name, on_success=None):
+    """Execute in daemon thread"""
+    console.append(f"[INFO] {name} started")
     def wrapper():
         try:
-            console_output.append(f"[INFO] Starting {task_name} process...")
-            func(console_output)
-            console_output.append(f"[SUCCESS] {task_name} completed successfully")
-            if on_success:
-                on_success()
+            console.append(f"[INFO] Starting {name}...")
+            func(console)
+            console.append(f"[SUCCESS] {name} completed")
+            if on_success: on_success()
         except Exception as e:
             import traceback
-            console_output.append(f"[ERROR] {task_name} failed: {str(e)}")
-            console_output.append(traceback.format_exc())
-
+            console.append(f"[ERROR] {name} failed: {e}")
+            console.append(traceback.format_exc())
     threading.Thread(target=wrapper, daemon=True).start()
 
-
-# ==================== Main Window Handlers ====================
-
 def on_login_clicked(main_window, stacked_widget, login_window):
-    """Navigate to login window"""
     stacked_widget.setCurrentWidget(login_window)
 
 
-def on_get_cookie_clicked(tab_widget, main_window=None):
-    """Execute getCookie in a new thread with dedicated tab"""
-    console_output = _create_console_tab(tab_widget, "Get Cookie")
-
-    def run_task(console):
+def on_get_cookie_clicked(tw, mw=None):
+    """Execute getCookie"""
+    def run(c):
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
         from login.getCookie import main as get_cookie_main
         get_cookie_main()
+    _run_in_thread(run, _create_console_tab(tw, "Get Cookie"), "getCookie", lambda: mw.update_status() if mw else None)
 
-    def on_success():
-        if main_window:
-            main_window.update_status()
-
-    _run_in_thread(run_task, console_output, "getCookie", on_success)
-
-
-def on_get_todo_clicked(tab_widget, main_window=None):
-    """Execute getTodos in a new thread with dedicated tab"""
-    console_output = _create_console_tab(tab_widget, "Get TODO")
-
-    def run_task(console):
+def on_get_todo_clicked(tw, mw=None):
+    """Execute getTodos"""
+    def run(c):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from getTodos import main as get_todos_main
-        get_todos_main()
+        from getTodos import main
+        main()
+    def success():
+        if mw: mw.load_data(); mw.on_category_changed(mw.main_window.categoryList.currentRow())
+    _run_in_thread(run, _create_console_tab(tw, "Get TODO"), "getTodos", success)
 
-    def on_success():
-        if main_window:
-            main_window.load_data()
-            main_window.on_category_changed(main_window.main_window.categoryList.currentRow())
-
-    _run_in_thread(run_task, console_output, "getTodos", on_success)
-
-
-def on_get_course_clicked(tab_widget, main_window=None):
-    """Execute getCourses in a new thread with dedicated tab"""
-    console_output = _create_console_tab(tab_widget, "Get Courses")
-
-    def run_task(console):
+def on_get_course_clicked(tw, mw=None):
+    """Execute getCourses"""
+    def run(c):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from getCourses import main as get_courses_main
-        get_courses_main()
-        console.append("✓ Courses data saved")
-
-    def on_success():
-        if main_window:
-            main_window.load_data()
-            main_window.update_status()
-
-    _run_in_thread(run_task, console_output, "getCourses", on_success)
+        from getCourses import main
+        main()
+        c.append("✓ Courses saved")
+    def success():
+        if mw: mw.load_data(); mw.update_status()
+    _run_in_thread(run, _create_console_tab(tw, "Get Courses"), "getCourses", success)
 
 
-def on_clean_clicked(tab_widget):
-    """Execute clean.py in a new thread with dedicated tab"""
-    console_output = _create_console_tab(tab_widget, "Clean")
+def on_gsyll_all_clicked(tw):
+    """Execute getSyll.py for all courses"""
+    def run(c):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+        from getSyll import run_extraction_for_course, logger
+        import json
 
-    def run_task(console):
+        # Read courses
+        with open(config.COURSE_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            courses = data.get('courses', data) if isinstance(data, dict) else data
+
+        c.append(f"[INFO] Found {len(courses)} courses to process")
+
+        # Run extraction for each course
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            results = [r for r in executor.map(run_extraction_for_course, courses) if r[0]]
+
+        c.append("\n--- Syllabus Extraction Summary ---")
+        found_count = sum(1 for _, s in results if s)
+        for name, successes in sorted(results):
+            status = f"[SUCCESS] {name}: Found via {', '.join(sorted(set(successes)))}" if successes else f"[ FAIL  ] {name}: No syllabus found."
+            c.append(status)
+        c.append(f"\nSummary: Found syllabus for {found_count} out of {len(results)} courses.")
+    _run_in_thread(run, _create_console_tab(tw, "Get Syllabus All"), "gSyllAll")
+
+def on_clean_clicked(tw):
+    """Execute clean.py"""
+    def run(c):
         from io import StringIO
         sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
         from clean import preview_deletion, clean_directory, build_tree, print_tree
+        td = preview_deletion()
+        if not td: return c.append("✓ No files to clean")
+        c.append(f"Found {len(td)} files:\n")
+        to = StringIO()
+        old = sys.stdout
+        sys.stdout = to
+        print_tree(build_tree(td))
+        sys.stdout = old
+        c.append(to.getvalue())
+        c.append("\n[INFO] Auto-confirming cleanup...")
+        clean_directory(td)
+    _run_in_thread(run, _create_console_tab(tw, "Clean"), "Clean")
 
-        to_delete = preview_deletion()
-        if not to_delete:
-            console.append("✓ No files to clean")
-            return
+def on_back_clicked(sw, mw):
+    sw.setCurrentWidget(mw)
 
-        console.append(f"Found {len(to_delete)} files to delete:\n")
-
-        # Capture tree output
-        tree_output = StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = tree_output
-        print_tree(build_tree(to_delete))
-        sys.stdout = old_stdout
-
-        console.append(tree_output.getvalue())
-        console.append("\n[INFO] Auto-confirming cleanup (running from GUI)...")
-        clean_directory(to_delete)
-
-    _run_in_thread(run_task, console_output, "Clean")
-
-
-# ==================== Login Window Handlers ====================
-
-def on_back_clicked(stacked_widget, main_window):
-    """Navigate back to main window"""
-    stacked_widget.setCurrentWidget(main_window)
-
-
-def on_submit_clicked(account_input, password_input, key_input, stacked_widget, main_window):
-    """Save account info to account_info.json and navigate back"""
+def on_submit_clicked(ai, pi, ki, sw, mw):
+    """Save account info - only update account/password/otp_key fields"""
     try:
-        # Collect and validate inputs
-        credentials = {
-            "account": account_input.text().strip(),
-            "password": password_input.text().strip(),
-            "otp_key": key_input.text().strip()
-        }
+        account = ai.text().strip()
+        password = pi.text().strip()
+        otp_key = ki.text().strip()
 
-        if not all(credentials.values()):
-            print("[ERROR] All fields are required")
-            return
+        if not all([account, password, otp_key]):
+            return print("[ERROR] All fields required")
 
-        # Save to file
-        with open(config.ACCOUNT_INFO_FILE, 'w') as f:
-            json.dump(credentials, f, indent=2)
+        # Load existing config to preserve other fields
+        config_data = {}
+        if os.path.exists(config.ACCOUNT_CONFIG_FILE):
+            with open(config.ACCOUNT_CONFIG_FILE) as f:
+                config_data = json.load(f)
 
-        print(f"[SUCCESS] Account info saved to {config.ACCOUNT_INFO_FILE}")
+        # Update only the three login fields
+        config_data['account'] = account
+        config_data['password'] = password
+        config_data['otp_key'] = otp_key
 
-        # Clear and navigate
-        for field in (account_input, password_input, key_input):
-            field.clear()
-        stacked_widget.setCurrentWidget(main_window)
+        # Save back
+        with open(config.ACCOUNT_CONFIG_FILE, 'w') as f:
+            json.dump(config_data, f, indent=2)
 
+        print(f"[SUCCESS] Login credentials saved to {config.ACCOUNT_CONFIG_FILE}")
+        for f in (ai, pi, ki): f.clear()
+        sw.setCurrentWidget(mw)
     except Exception as e:
-        print(f"[ERROR] Failed to save account info: {str(e)}")
+        print(f"[ERROR] Save failed: {e}")
 
 
-# ==================== Status Update Functions ====================
-
-def update_status_indicators(status_widgets, checkStatus):
-    """Update all status indicator colors based on check results"""
-    status = checkStatus.get_all_status()
-
-    # Color mapping: 0=red, 1=green, 2=yellow
+def update_status_indicators(sw, cs):
+    """Update status indicators"""
+    st = cs.get_all_status()
     colors = {0: '#ef4444', 1: '#22c55e', 2: '#eab308'}
-
-    # Apply styles to all indicators
-    for key, widget in status_widgets.items():
-        color = colors[status[key]]
-        widget.setStyleSheet(f"background-color: {color}; border-radius: 6px;")
-
-
-# ==================== User Info Functions ====================
+    for k, w in sw.items(): w.setStyleSheet(f"background-color: {colors[st[k]]}; border-radius: 6px;")
 
 def get_user_info():
-    """Get user info from account_info.json and Canvas API"""
-    user_info = {'email': '--', 'name': '--', 'id': '--'}
-
+    """Get user info"""
+    ui = {'email': '--', 'name': '--', 'id': '--'}
     try:
-        # Get email from account_info.json
         if os.path.exists(config.ACCOUNT_INFO_FILE):
-            with open(config.ACCOUNT_INFO_FILE, 'r') as f:
-                user_info['email'] = json.load(f).get('account', '--')
-
-        # Get name and ID from Canvas API
+            ui['email'] = json.load(open(config.ACCOUNT_INFO_FILE)).get('account', '--')
         if os.path.exists(config.COOKIES_FILE):
-            with open(config.COOKIES_FILE, 'r') as f:
-                cookies = {c['name']: c['value'] for c in json.load(f)}
-
-            resp = requests.get(
-                'https://psu.instructure.com/api/v1/users/self',
-                cookies=cookies,
-                timeout=5
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                user_info.update({
-                    'name': data.get('name', '--'),
-                    'id': str(data.get('id', '--'))
-                })
-
+            cookies = {c['name']: c['value'] for c in json.load(open(config.COOKIES_FILE))}
+            r = requests.get('https://psu.instructure.com/api/v1/users/self', cookies=cookies, timeout=5)
+            if r.status_code == 200:
+                d = r.json()
+                ui.update({'name': d.get('name', '--'), 'id': str(d.get('id', '--'))})
     except Exception as e:
-        print(f"[ERROR] Failed to get user info: {e}")
+        print(f"[ERROR] Get user info failed: {e}")
+    return ui
 
-    return user_info
-
-
-def update_user_info_labels(email_label, name_label, id_label):
-    """Update user info labels in the UI"""
+def update_user_info_labels(el, nl, il):
+    """Update user info labels"""
     info = get_user_info()
-    for label, key in [(email_label, 'email'), (name_label, 'name'), (id_label, 'id')]:
-        label.setText(f"{key.capitalize()}: {info[key]}")
+    for lbl, key in [(el, 'email'), (nl, 'name'), (il, 'id')]:
+        lbl.setText(f"{key.capitalize()}: {info[key]}")

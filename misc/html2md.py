@@ -1,4 +1,4 @@
-import json, os, re, time
+import json, os, re, time, requests
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from markdownify import markdownify as md
@@ -53,6 +53,58 @@ def convert_to_md(course_name, course_full_name, tab_name, url, html_file, md_fi
         return f"✓ MD: {course_name}/{tab_name}"
     except Exception as e:
         return f"✗ MD: {course_name}/{tab_name}: {str(e)[:30]}"
+
+
+def fetch_html_single(url):
+    """
+    Fetch single URL HTML content using Selenium
+    Args:
+        url: str, full URL to fetch
+    Returns: str, HTML content with scripts removed
+    """
+    # Load cookies
+    with open(config.COOKIES_FILE) as f:
+        cookies_list = json.load(f)
+
+    options = Options()
+    options.add_argument('--headless=new')
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox')
+    driver = webdriver.Chrome(options=options)
+
+    try:
+        # Set cookies
+        for cookie in cookies_list:
+            driver.execute_cdp_cmd('Network.setCookie', {
+                'name': cookie['name'], 'value': cookie['value'], 'domain': cookie['domain'],
+                'path': cookie.get('path', '/'), 'httpOnly': cookie.get('httpOnly', False),
+                'secure': cookie.get('secure', False), 'sameSite': cookie.get('sameSite', 'Lax'),
+                'expires': cookie.get('expiry', int(time.time()) + 86400)
+            })
+
+        # Fetch page
+        driver.get(url)
+        time.sleep(2)  # Wait for page to load
+
+        # Remove scripts and return
+        html_content = remove_scripts(driver.page_source)
+        return html_content
+
+    finally:
+        driver.quit()
+
+
+def convert_to_md_single(html_content, tab_name, course_name, url):
+    """
+    Convert HTML content to markdown
+    Args:
+        html_content: str, HTML content
+        tab_name: str, name of tab
+        course_name: str, course name
+        url: str, source URL
+    Returns: str, markdown content
+    """
+    return f"# {tab_name}\n\n**Course**: {course_name}\n**URL**: {url}\n\n---\n\n{md(html_content)}"
 
 def main():
     with open(config.COOKIES_FILE) as f:

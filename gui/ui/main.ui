@@ -55,6 +55,13 @@
        </layout>
       </item>
       <item>
+       <layout class="QVBoxLayout" name="historyToggleLayout">
+        <property name="spacing">
+         <number>4</number>
+        </property>
+       </layout>
+      </item>
+      <item>
        <spacer name="topSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -336,9 +343,9 @@
        <number>8</number>
       </property>
       <item>
-       <widget class="QPushButton" name="loginBtn">
+       <widget class="QPushButton" name="backBtn">
         <property name="text">
-         <string>Login</string>
+         <string>Back</string>
         </property>
         <property name="minimumSize">
          <size>
@@ -412,6 +419,25 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="gSyllAllBtn">
+        <property name="text">
+         <string>gSyllAll</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="cleanBtn">
         <property name="text">
          <string>Clean</string>
@@ -433,7 +459,7 @@
       <item>
        <widget class="QPushButton" name="automationTopBtn">
         <property name="text">
-         <string>Automation</string>
+         <string>Auto</string>
         </property>
         <property name="minimumSize">
          <size>
@@ -494,7 +520,7 @@
         <item>
          <widget class="QPushButton" name="automationBtn">
           <property name="text">
-           <string>Automation</string>
+           <string>Auto</string>
           </property>
           <property name="minimumHeight">
            <number>32</number>
@@ -511,14 +537,31 @@
        </widget>
       </item>
       <item>
-       <widget class="QTextEdit" name="detailView">
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-        <property name="placeholderText">
-         <string>Select an item to view details...</string>
-        </property>
-       </widget>
+       <layout class="QVBoxLayout" name="detailColumnLayout">
+        <item>
+         <widget class="QPushButton" name="courseDetailBtn">
+          <property name="text">
+           <string>Course Detail</string>
+          </property>
+          <property name="minimumHeight">
+           <number>32</number>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 14px; font-weight: bold;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTextBrowser" name="detailView">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>Select an item to view details...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
      </layout>
     </item>

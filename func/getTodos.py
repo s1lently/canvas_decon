@@ -13,8 +13,8 @@ def load_cookies():
     with open(config.COOKIES_FILE, 'r') as f:
         return {c['name']: c['value'] for c in json.load(f)}
 
-def get_todos(session, days=90):
-    """Get todos for the next N days using planner API (default: 90)"""
+def get_todos(session, days=365):
+    """Get todos for the next N days using planner API (default: 365 = full academic year)"""
     from datetime import datetime, timedelta
 
     # Calculate date range
@@ -73,7 +73,7 @@ def get_todos(session, days=90):
 
         page += 1
 
-    print(f"Found {len(all_items)} upcoming items (next {days} days)")
+    print(f"Found {len(all_items)} upcoming items (next {days} days, {page} pages)")
     return all_items
 
 def extract_course_code(context_name):
@@ -232,12 +232,13 @@ def fetch_assignment_details(session, assignment_url, assignment_name, due_date,
             'is_quiz': assignment_data.get('is_quiz_assignment', False),
             'quiz_id': assignment_data.get('quiz_id'),
             'submitted': assignment_data.get('has_submitted_submissions', False),
+            'locked_for_user': assignment_data.get('locked_for_user', False),
             'files': downloaded_files if downloaded_files else None
         }
 
         # For quizzes, add metadata about locked status and quiz type
         if 'quizzes' in parts:
-            result['quiz_metadata'] = {
+            quiz_metadata = {
                 'locked_for_user': assignment_data.get('locked_for_user', False),
                 'unlock_at': assignment_data.get('unlock_at'),
                 'lock_at': assignment_data.get('lock_at'),
@@ -247,6 +248,32 @@ def fetch_assignment_details(session, assignment_url, assignment_name, due_date,
                 'time_limit': assignment_data.get('time_limit'),
                 'question_count': assignment_data.get('question_count', 0)
             }
+
+            # Get quiz submission attempts
+            try:
+                submissions_url = f"{config.CANVAS_BASE_URL}/api/v1/courses/{course_id}/quizzes/{quiz_id}/submissions"
+                sub_response = session.get(submissions_url)
+                if sub_response.status_code == 200:
+                    submissions = sub_response.json()
+                    if submissions and 'quiz_submissions' in submissions:
+                        user_submissions = submissions['quiz_submissions']
+                        if user_submissions:
+                            # Get the latest submission
+                            latest_sub = user_submissions[0]
+                            quiz_metadata['attempt'] = latest_sub.get('attempt', 0)
+                            quiz_metadata['attempts_left'] = quiz_metadata['allowed_attempts'] - quiz_metadata['attempt'] if quiz_metadata['allowed_attempts'] != -1 else 999
+                        else:
+                            quiz_metadata['attempt'] = 0
+                            quiz_metadata['attempts_left'] = quiz_metadata['allowed_attempts'] if quiz_metadata['allowed_attempts'] != -1 else 999
+                    else:
+                        quiz_metadata['attempt'] = 0
+                        quiz_metadata['attempts_left'] = quiz_metadata['allowed_attempts'] if quiz_metadata['allowed_attempts'] != -1 else 999
+            except:
+                # If we can't get submissions, assume no attempts yet
+                quiz_metadata['attempt'] = 0
+                quiz_metadata['attempts_left'] = quiz_metadata['allowed_attempts'] if quiz_metadata['allowed_attempts'] != -1 else 999
+
+            result['quiz_metadata'] = quiz_metadata
             # Check if quiz is online (assignment quiz_type and published)
             if assignment_data.get('quiz_type') == 'assignment' and assignment_data.get('published'):
                 if 'online_quiz' not in result['type']:
@@ -271,7 +298,17 @@ def fetch_assignment_details(session, assignment_url, assignment_name, due_date,
         return {'error': str(e)}
 
 def process_and_save_todos(todos, session):
-    simplified_todos = []
+    """Process todos using insert/update pattern (no rewrite)"""
+    output_path = os.path.join(config.ROOT_DIR, 'todos.json')
+
+    # Load existing todos
+    existing = {}
+    if os.path.exists(output_path):
+        with open(output_path, 'r', encoding='utf-8') as f:
+            for t in json.load(f):
+                url = t.get('redirect_url')
+                if url: existing[url] = t
+
     todo_files_dir = os.path.join(config.ROOT_DIR, 'todo_files')
     os.makedirs(todo_files_dir, exist_ok=True)
 
@@ -295,7 +332,6 @@ def process_and_save_todos(todos, session):
         print(f"\nFetching: {todo_data['name']}")
         print(f"  URL: {redirect_url}")
 
-        # Pass assignment name and due date to create dedicated folder
         assignment_details = fetch_assignment_details(
             session, redirect_url, assignment_name, due_date, todo_files_dir
         )
@@ -307,13 +343,20 @@ def process_and_save_todos(todos, session):
         else:
             print(f"  Type: {', '.join(assignment_details.get('type', []))}, Quiz: {assignment_details.get('is_quiz')}, Submitted: {assignment_details.get('submitted')}")
 
-        simplified_todos.append(todo_data)
+        existing[redirect_url] = todo_data
 
-    output_path = os.path.join(config.ROOT_DIR, 'todos.json')
+    # Save as sorted list by due_date
+    from datetime import datetime
+    def parse_due(t):
+        d = t.get('due_date')
+        try: return datetime.fromisoformat(d.replace('Z', '+00:00')) if d else datetime.max
+        except: return datetime.max
+
+    result = sorted(existing.values(), key=parse_due)
     with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(simplified_todos, f, indent=2, ensure_ascii=False)
+        json.dump(result, f, indent=2, ensure_ascii=False)
     print(f"\n{'='*80}\nSaved to: {output_path}")
-    return simplified_todos
+    return result
 
 def display_todos(todos):
     if not todos:
@@ -323,8 +366,8 @@ def display_todos(todos):
     for i, item in enumerate(todos, 1):
         print(f"[{i}] {item['name']}\n    Course: {item['course_name']}\n    Due: {format_datetime(item['due_date'])}\n    Points: {item['points_possible']}\n    URL: {item['redirect_url']}\n")
 
-def main(days=90):
-    """Main function - fetch TODOs for next N days (default: 90)"""
+def main(days=365):
+    """Main function - fetch TODOs for next N days (default: 365 = full year)"""
     print(f"Fetching Canvas TODO items (next {days} days)...")
     cookies = load_cookies()
     session = requests.Session()

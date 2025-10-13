@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>LauncherOverlay</class>
+ <widget class="QWidget" name="LauncherOverlay">
+  <property name="windowTitle">
+   <string>Launcher</string>
+  </property>
+  <property name="styleSheet">
+   <string>QWidget#LauncherOverlay {
+    background-color: rgba(10, 10, 10, 250);
+   }
+   QPushButton#closeBtn {
+    background-color: transparent;
+    border: none;
+    color: #ef4444;
+    font-size: 24px;
+    font-weight: bold;
+   }
+   QPushButton#closeBtn:hover {
+    color: #dc2626;
+   }
+   QLabel#projectTitle {
+    font-size: 32px;
+    font-weight: bold;
+    color: #3b82f6;
+   }</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="contentLayout">
+     <property name="spacing">
+      <number>20</number>
+     </property>
+     <property name="leftMargin">
+      <number>20</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>20</number>
+     </property>
+     <property name="bottomMargin">
+      <number>20</number>
+     </property>
+     <item>
+      <widget class="QListWidget" name="todoList">
+       <property name="minimumWidth">
+        <number>450</number>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="centerLayout">
+       <property name="spacing">
+        <number>40</number>
+       </property>
+       <property name="leftMargin">
+        <number>40</number>
+       </property>
+       <property name="rightMargin">
+        <number>40</number>
+       </property>
+       <item>
+        <spacer name="topSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="projectTitle">
+         <property name="text">
+          <string>Canvas LMS Automation</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="buttonLayout">
+         <property name="spacing">
+          <number>16</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="dashboardBtn">
+           <property name="text">
+            <string>Dashboard</string>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string>QPushButton {
+    background-color: #3b82f6;
+    color: white;
+    font-size: 17px;
+    font-weight: bold;
+    border: none;
+    border-radius: 12px;
+   }
+   QPushButton:hover {
+    background-color: #2563eb;
+   }
+   QPushButton:pressed {
+    background-color: #1d4ed8;
+   }</string>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="automationBtn">
+           <property name="text">
+            <string>Automation</string>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string>QPushButton {
+    background-color: #1a1a1a;
+    color: #ededed;
+    font-size: 17px;
+    font-weight: bold;
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+   }
+   QPushButton:hover {
+    background-color: #2a2a2a;
+    border-color: #2563eb;
+   }
+   QPushButton:pressed {
+    background-color: #3a3a3a;
+   }</string>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="settingsBtn">
+           <property name="text">
+            <string>Settings</string>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>280</width>
+             <height>55</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string>QPushButton {
+    background-color: #1a1a1a;
+    color: #ededed;
+    font-size: 17px;
+    font-weight: bold;
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+   }
+   QPushButton:hover {
+    background-color: #2a2a2a;
+    border-color: #2563eb;
+   }
+   QPushButton:pressed {
+    background-color: #3a3a3a;
+   }</string>
+           </property>
+           <property name="cursor">
+            <cursorShape>PointingHandCursor</cursorShape>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="bottomSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QListWidget" name="courseList">
+       <property name="minimumWidth">
+        <number>450</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

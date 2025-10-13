@@ -1,0 +1,718 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AutoDetailWindow</class>
+ <widget class="QWidget" name="AutoDetailWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1600</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Automation Detail</string>
+  </property>
+  <layout class="QVBoxLayout" name="mainLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
+   <item>
+    <!-- Top identification bar -->
+    <widget class="QWidget" name="topBar" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>80</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>80</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QWidget#topBar {
+    background-color: #0f0f0f;
+    border-bottom: 2px solid #3b82f6;
+}</string>
+     </property>
+     <layout class="QHBoxLayout" name="topBarLayout">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <property name="leftMargin">
+       <number>30</number>
+      </property>
+      <property name="topMargin">
+       <number>15</number>
+      </property>
+      <property name="rightMargin">
+       <number>30</number>
+      </property>
+      <property name="bottomMargin">
+       <number>15</number>
+      </property>
+      <item>
+       <widget class="QPushButton" name="backBtn">
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>← Back</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="courseNameLabel">
+        <property name="text">
+         <string>Course: --</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 16px; font-weight: bold; color: #3b82f6;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="assignmentNameLabel">
+        <property name="text">
+         <string>Assignment: --</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 14px; color: #e0e0e0;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="typeLabel">
+        <property name="text">
+         <string>Type: --</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px; color: #9ca3af;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="dueDateLabel">
+        <property name="text">
+         <string>Due: --</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px; color: #eab308;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <!-- Main workspace: 3-column layout -->
+    <widget class="QSplitter" name="mainSplitter">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="handleWidth">
+      <number>1</number>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QSplitter::handle {
+    background-color: #333;
+}</string>
+     </property>
+
+     <!-- Left panel: Assignment Detail (top) + Reference Files (bottom) -->
+     <widget class="QWidget" name="leftPanel" native="true">
+      <layout class="QVBoxLayout" name="leftPanelLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QSplitter" name="leftSplitter">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="handleWidth">
+          <number>1</number>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QSplitter::handle {
+    background-color: #333;
+}</string>
+         </property>
+
+         <!-- Top: Assignment Detail -->
+         <widget class="QWidget" name="detailWidget" native="true">
+          <layout class="QVBoxLayout" name="detailLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <property name="leftMargin">
+            <number>20</number>
+           </property>
+           <property name="topMargin">
+            <number>20</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <property name="bottomMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="detailTitle">
+             <property name="text">
+              <string>📋 Assignment Detail</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font-size: 16px; font-weight: bold; color: #60a5fa; border-bottom: 2px solid #3b82f6; padding-bottom: 8px;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextBrowser" name="assignmentDetailView">
+             <property name="styleSheet">
+              <string notr="true">QTextBrowser {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 13px;
+}</string>
+             </property>
+             <property name="openExternalLinks">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+
+         <!-- Bottom: Reference Files Preview -->
+         <widget class="QWidget" name="refFilesWidget" native="true">
+          <layout class="QVBoxLayout" name="refFilesLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <property name="leftMargin">
+            <number>20</number>
+           </property>
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <property name="rightMargin">
+            <number>10</number>
+           </property>
+           <property name="bottomMargin">
+            <number>20</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="refFilesTitle">
+             <property name="text">
+              <string>📁 Reference Files (to upload to AI)</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font-size: 16px; font-weight: bold; color: #a78bfa; border-bottom: 2px solid #7c3aed; padding-bottom: 8px;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextBrowser" name="refFilesView">
+             <property name="styleSheet">
+              <string notr="true">QTextBrowser {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 12px;
+}</string>
+             </property>
+             <property name="openExternalLinks">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Center panel: Control Console -->
+     <widget class="QWidget" name="centerPanel" native="true">
+      <layout class="QVBoxLayout" name="centerPanelLayout">
+       <property name="spacing">
+        <number>15</number>
+       </property>
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>20</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>20</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="consoleTitle">
+         <property name="text">
+          <string>🎮 Control Console</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">font-size: 18px; font-weight: bold; color: #22c55e; border-bottom: 2px solid #22c55e; padding-bottom: 8px;</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+
+       <item>
+        <spacer name="topSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+
+       <!-- Homework Control Buttons (hidden by default) -->
+       <item>
+        <widget class="QWidget" name="hwControlWidget" native="true">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="hwControlLayout">
+          <property name="spacing">
+           <number>15</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="hwUploadPreviewBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>📤 Upload &amp; Generate Preview</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #3b82f6;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #2563eb;
+}
+QPushButton:pressed {
+    background-color: #1d4ed8;
+}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="hwRejectEditBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>🔄 Reject &amp; Edit</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #eab308;
+    color: #0a0a0a;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #ca8a04;
+}
+QPushButton:pressed {
+    background-color: #a16207;
+}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="hwSubmitBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>✅ Confirm &amp; Submit</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #22c55e;
+    color: #0a0a0a;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #16a34a;
+}
+QPushButton:pressed {
+    background-color: #15803d;
+}</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <!-- Quiz Control Buttons (hidden by default) -->
+       <item>
+        <widget class="QWidget" name="quizControlWidget" native="true">
+         <property name="visible">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="quizControlLayout">
+          <property name="spacing">
+           <number>15</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="quizStartPreviewBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>🚀 Start &amp; Get Preview</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #3b82f6;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #2563eb;
+}
+QPushButton:pressed {
+    background-color: #1d4ed8;
+}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="quizRejectEditBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>🔄 Reject &amp; Edit</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #eab308;
+    color: #0a0a0a;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #ca8a04;
+}
+QPushButton:pressed {
+    background-color: #a16207;
+}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="quizSubmitBtn">
+            <property name="minimumHeight">
+             <number>50</number>
+            </property>
+            <property name="text">
+             <string>✅ Confirm &amp; Submit</string>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton {
+    background-color: #22c55e;
+    color: #0a0a0a;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #16a34a;
+}
+QPushButton:pressed {
+    background-color: #15803d;
+}</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+
+       <item>
+        <widget class="QPushButton" name="editPromptBtn">
+         <property name="minimumHeight">
+          <number>45</number>
+         </property>
+         <property name="text">
+          <string>✏️ Edit Prompt</string>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QPushButton {
+    background-color: #6366f1;
+    color: white;
+    font-size: 13px;
+    font-weight: bold;
+    border-radius: 8px;
+    border: none;
+}
+QPushButton:hover {
+    background-color: #4f46e5;
+}
+QPushButton:pressed {
+    background-color: #4338ca;
+}</string>
+         </property>
+        </widget>
+       </item>
+
+       <item>
+        <spacer name="bottomSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+
+     <!-- Right panel: AI Preview (top) + Prompt Edit (bottom) -->
+     <widget class="QWidget" name="rightPanel" native="true">
+      <layout class="QVBoxLayout" name="rightPanelLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QSplitter" name="rightSplitter">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="handleWidth">
+          <number>1</number>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QSplitter::handle {
+    background-color: #333;
+}</string>
+         </property>
+
+         <!-- Top: AI Preview -->
+         <widget class="QWidget" name="previewWidget" native="true">
+          <layout class="QVBoxLayout" name="previewLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>20</number>
+           </property>
+           <property name="rightMargin">
+            <number>20</number>
+           </property>
+           <property name="bottomMargin">
+            <number>10</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="previewTitle">
+             <property name="text">
+              <string>🤖 AI Preview</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font-size: 16px; font-weight: bold; color: #22c55e; border-bottom: 2px solid #22c55e; padding-bottom: 8px;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextBrowser" name="aiPreviewView">
+             <property name="styleSheet">
+              <string notr="true">QTextBrowser {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 13px;
+}</string>
+             </property>
+             <property name="openExternalLinks">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="previewStatusLabel">
+             <property name="text">
+              <string>Status: No preview generated yet</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font-size: 12px; color: #9ca3af; padding: 8px;</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+
+         <!-- Bottom: Prompt Editor -->
+         <widget class="QWidget" name="promptWidget" native="true">
+          <layout class="QVBoxLayout" name="promptLayout">
+           <property name="spacing">
+            <number>10</number>
+           </property>
+           <property name="leftMargin">
+            <number>10</number>
+           </property>
+           <property name="topMargin">
+            <number>10</number>
+           </property>
+           <property name="rightMargin">
+            <number>20</number>
+           </property>
+           <property name="bottomMargin">
+            <number>20</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="promptTitle">
+             <property name="text">
+              <string>💬 Prompt Editor</string>
+             </property>
+             <property name="styleSheet">
+              <string notr="true">font-size: 16px; font-weight: bold; color: #f59e0b; border-bottom: 2px solid #d97706; padding-bottom: 8px;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTextEdit" name="promptEditBox">
+             <property name="styleSheet">
+              <string notr="true">QTextEdit {
+    background-color: #0a0a0a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 15px;
+    font-size: 13px;
+    font-family: 'Consolas', 'Monaco', monospace;
+}</string>
+             </property>
+             <property name="placeholderText">
+              <string>Enter custom prompt here...
+
+This will be appended to the default system prompt.
+Use this to provide additional context or specific instructions to the AI.</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -16,12 +16,17 @@ def simplify_course_name(full_name):
     return ' '.join(full_name.split()[:2]).replace(':', '')
 
 class SyllabusExtractor:
-    def __init__(self, course_id, simple_course_name):
+    def __init__(self, course_id, simple_course_name, full_course_name):
         self.course_id, self.course_name = course_id, simple_course_name
         self.log_prefix, self.successes = f"[{self.course_name}]", []
         self.base_url, self.api_base = "https://psu.instructure.com", "https://psu.instructure.com/api/v1"
         with open(config.COOKIES_FILE) as f: self.cookies = {c['name']: c['value'] for c in json.load(f)}
-        self.save_dir = f"{self.course_id}/syll"
+        # Use unified folder structure: /Courses/CourseName_CourseID/Syll (short name: first 2 words)
+        words = full_course_name.split()
+        short_name = ' '.join(words[:2]) if len(words) >= 2 else full_course_name
+        safe_name = "".join(c if c.isalnum() or c in (' ', '_') else '_' for c in short_name).lower()
+        course_dir = os.path.join(config.COURSES_DIR, f"{safe_name}_{course_id}")
+        self.save_dir = os.path.join(course_dir, 'Syll')
         os.makedirs(self.save_dir, exist_ok=True)
 
     def _get_request(self, url):
@@ -87,7 +92,7 @@ def run_extraction_for_course(course):
     if not course_id: return (None, [])
     simple_name = simplify_course_name(full_name)
     logger.info(f"--- Processing: {simple_name} ({course_id}) ---")
-    extractor = SyllabusExtractor(course_id, simple_name)
+    extractor = SyllabusExtractor(course_id, simple_name, full_name)
     try:
         extractor.method1_course_page()
         if not extractor.successes: extractor.method2_modules()

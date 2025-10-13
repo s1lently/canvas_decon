@@ -1,21 +1,60 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+venv/
+env/
 
 # Personal information
 cookies.json
 account_info.json
 personal_info.json
+
+# Course data
 course.json
+Courses/
+his_todo.json
 
 # Generated files
 *.html
 post_exp.txt
 todos.json
 todo_files/
+Done.txt
+
+# Quiz/Homework output
+quiz_res/
+homework_submissions/
+*.md
+!README.md
+!CLAUDE.md
+*.docx
 
 # PDF files
 bisc_pdfs/
+
+# Logs
+*.log
+syllabus_extractor.log
+
+# Temporary files
+nul
+*.tmp
+*.bak
+*.swp
+*~
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
 
 # Claude Code
 .claude/
@@ -23,3 +62,12 @@ bisc_pdfs/
 # Mac/Windows
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Debug/Test files
+debug_*.py
+test_*.py
+*_original.py.bak
+
+# JSON data (runtime)
+json_*.json

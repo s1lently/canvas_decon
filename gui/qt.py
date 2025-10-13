@@ -1,781 +1,1118 @@
-import sys
-import os
-import time
-import threading
+import sys, os, time, threading, json, re, requests, html2text, webbrowser, subprocess, platform
 from datetime import datetime, timedelta
-
-from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget
-from PyQt6.QtCore import QTimer, pyqtSignal, QObject
+from io import StringIO
+from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QListWidgetItem, QListWidget, QMessageBox, QStyledItemDelegate, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout
+from PyQt6.QtCore import pyqtSignal, QObject, Qt, QEvent
 from PyQt6.uic import loadUi
+from bs4 import BeautifulSoup
+import markdown as md_lib
 
-# Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import config
-import checkStatus
-from gui import qt_interact
+import config, checkStatus
+from gui import qt_interact, formatters, delegates
+from gui.data_manager import DataManager
+from gui.done_manager import DoneManager
+from gui.course_detail_manager import CourseDetailManager
+from gui.auto_detail_manager import AutoDetailManager
 from gui.styles import DARK_THEME
-
+from gui.ios_toggle import IOSToggle
 
 class StatusUpdateSignal(QObject):
-    """Signal for thread-safe status updates"""
     update = pyqtSignal()
 
+class TabContentSignal(QObject):
+    update_html = pyqtSignal(str)
 
 class CanvasApp(QMainWindow):
     def __init__(self):
         super().__init__()
-
-        # Initialize signal
+        self.dm, self.done_mgr, self.course_detail_mgr, self.auto_detail_mgr = DataManager(), DoneManager(), None, None
+        self.history_mode = False
         self.status_signal = StatusUpdateSignal()
         self.status_signal.update.connect(self.update_status)
-
-        # Qt initialization
+        self.tab_content_signal = TabContentSignal()
+        self.tab_content_signal.update_html.connect(self._update_course_detail_html)
         self.init_qt()
-
-        # Button bindings
         self.init_button_bindings()
-
-        # Data viewer bindings
         self.init_data_viewer()
-
-        # Status check
         self.check_status()
-
-        # Window settings
         self.setWindowTitle("Canvas LMS Automation")
         self.resize(1400, 800)
+        self.installEventFilter(self)
+        self._install_list_event_filters()
 
     def init_qt(self):
-        """Qt UI initialization"""
-        # Setup stacked widget for navigation
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
-
-        # Load UI files
         ui_dir = os.path.join(os.path.dirname(__file__), 'ui')
-
-        # Load main window
         self.main_window = loadUi(os.path.join(ui_dir, 'main.ui'))
-        self.stacked_widget.addWidget(self.main_window)
-
-        # Load login window
-        self.login_window = loadUi(os.path.join(ui_dir, 'login.ui'))
-        self.stacked_widget.addWidget(self.login_window)
-
-        # Load automation window
+        self.sitting_window = loadUi(os.path.join(ui_dir, 'sitting.ui'))
         self.automation_window = loadUi(os.path.join(ui_dir, 'automation.ui'))
-        self.stacked_widget.addWidget(self.automation_window)
+        self.course_detail_window = loadUi(os.path.join(ui_dir, 'course_detail.ui'))
+        self.auto_detail_window = loadUi(os.path.join(ui_dir, 'autoDetail.ui'))
+        self.launcher_overlay = loadUi(os.path.join(ui_dir, 'launcher.ui'))
+        for w in [self.main_window, self.sitting_window, self.automation_window, self.course_detail_window, self.auto_detail_window]:
+            self.stacked_widget.addWidget(w)
 
-        # Setup status indicators
-        self.status_widgets = {
-            'account': self.main_window.accountIndicator,
-            'cookie': self.main_window.cookieIndicator,
-            'todos': self.main_window.todosIndicator,
-            'network': self.main_window.networkIndicator,
-            'courses': self.main_window.coursesIndicator
-        }
+        self.status_widgets = {k: getattr(self.main_window, f'{k}Indicator') for k in ['account', 'cookie', 'todos', 'network', 'courses']}
+        for dv in [self.main_window.detailView, self.automation_window.automatableOpenDetailView, self.automation_window.automatableCloseDetailView,
+                   self.automation_window.automatableDetailView, self.automation_window.allItemsDetailView, self.course_detail_window.detailView,
+                   self.auto_detail_window.assignmentDetailView, self.auto_detail_window.refFilesView, self.auto_detail_window.aiPreviewView]:
+            dv.setOpenExternalLinks(True)
 
-        # Set initial window
+        # iOS toggles
+        self.ios_toggle_main = IOSToggle(width=50, height=24)
+        self.main_window.categoryColumnLayout.addWidget(self.ios_toggle_main)
+        self.ios_toggles_auto = [IOSToggle(width=50, height=24) for _ in range(4)]
+        for toggle, layout in zip(self.ios_toggles_auto, ['automatableOpenCategoryLayout', 'automatableCloseCategoryLayout', 'automatableCategoryLayout', 'allItemsCategoryLayout']):
+            getattr(self.automation_window, layout).addWidget(toggle)
+        self.ios_toggle_course_detail = IOSToggle(width=50, height=24)
+        self.course_detail_window.toggleLayout.addWidget(self.ios_toggle_course_detail)
+
+        # History mode toggle (right of user info)
+        self.history_toggle = IOSToggle(width=50, height=24)
+        hist_label = QLabel("History")
+        hist_label.setStyleSheet("font-size: 11px; color: #aaa;")
+        hist_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.main_window.historyToggleLayout.addWidget(hist_label)
+        self.main_window.historyToggleLayout.addWidget(self.history_toggle)
+        self.history_toggle.setChecked(False)
+
         self.stacked_widget.setCurrentWidget(self.main_window)
 
+        # Setup launcher overlay (defer data population)
+        self._init_launcher_overlay_ui()
+
+    def _init_launcher_overlay_ui(self):
+        """Initialize launcher overlay UI without data (defer data population)"""
+        from PyQt6.QtWidgets import QWidget
+        from PyQt6.QtCore import Qt as QtCore
+
+        # Make launcher overlay a child of main_window to overlay it
+        self.launcher_overlay.setParent(self.main_window)
+        self.launcher_overlay.setAttribute(QtCore.WidgetAttribute.WA_StyledBackground, True)
+
+        # Connect buttons
+        self.launcher_overlay.dashboardBtn.clicked.connect(self._hide_launcher)
+        self.launcher_overlay.automationBtn.clicked.connect(lambda: (self._hide_launcher(), self.on_automation_top_clicked()))
+        self.launcher_overlay.settingsBtn.clicked.connect(lambda: qt_interact.on_login_clicked(self.main_window, self.stacked_widget, self.sitting_window))
+
+        # Connect list interactions
+        self.launcher_overlay.courseList.itemDoubleClicked.connect(self._on_launcher_course_double_clicked)
+
+        # Apply TodoItemDelegate to todoList
+        self.launcher_overlay.todoList.setItemDelegate(delegates.TodoItemDelegate(self.launcher_overlay.todoList))
+
+        # Install event filters
+        self.main_window.installEventFilter(self)  # Track main_window resizes
+        self.launcher_overlay.todoList.installEventFilter(self)
+        self.launcher_overlay.courseList.installEventFilter(self)
+
+    def _show_launcher(self):
+        """Show launcher overlay with updated data and geometry"""
+        self._populate_launcher_data()
+        self._update_launcher_geometry()
+        self.launcher_overlay.raise_()
+        self.launcher_overlay.show()
+
+    def _update_launcher_geometry(self):
+        """Update launcher overlay geometry to match main window size"""
+        if hasattr(self, 'launcher_overlay') and self.launcher_overlay:
+            self.launcher_overlay.setGeometry(0, 0, self.main_window.width(), self.main_window.height())
+
+    def _populate_launcher_data(self):
+        """Populate launcher overlay with TODO and Course data"""
+        # Clear lists
+        self.launcher_overlay.todoList.clear()
+        self.launcher_overlay.courseList.clear()
+
+        # Populate TODO list (copy from main window TODO tab)
+        for todo in self.dm.get('todos'):
+            item = QListWidgetItem(f"{todo.get('course_name', '')} - {todo.get('name', '')}")
+            item.setData(Qt.ItemDataRole.UserRole, self.dm.classify_todo(todo))
+            item.setData(Qt.ItemDataRole.UserRole + 1, todo)
+            self.launcher_overlay.todoList.addItem(item)
+
+        # Populate Course list (copy from main window Courses tab)
+        for course in self.dm.get('courses'):
+            item = QListWidgetItem(course.get('name', 'Unknown'))
+            self.launcher_overlay.courseList.addItem(item)
+
+    def _hide_launcher(self):
+        """Hide the launcher overlay"""
+        self.launcher_overlay.hide()
+
+    def _load_current_login_info(self):
+        """Load and display current login account info"""
+        try:
+            if os.path.exists(config.ACCOUNT_CONFIG_FILE):
+                with open(config.ACCOUNT_CONFIG_FILE) as f:
+                    account_data = json.load(f)
+                    account = account_data.get('account', '--')
+                    self.sitting_window.accountDisplayLabel.setText(f"Account: {account}")
+        except:
+            self.sitting_window.accountDisplayLabel.setText("Account: --")
+
+    def _save_api_key(self, api_key):
+        """Save Gemini API key to account_config.json"""
+        if not api_key:
+            QMessageBox.warning(self, "Error", "Please enter an API key!")
+            return
+
+        try:
+            # Load existing config
+            config_data = {}
+            if os.path.exists(config.ACCOUNT_CONFIG_FILE):
+                with open(config.ACCOUNT_CONFIG_FILE) as f:
+                    config_data = json.load(f)
+
+            # Update API key
+            config_data['gemini_api_key'] = api_key
+
+            # Save back
+            with open(config.ACCOUNT_CONFIG_FILE, 'w') as f:
+                json.dump(config_data, f, indent=2)
+
+            QMessageBox.information(self, "Success", "API Key saved successfully!\nRestart the app to apply changes.")
+            self.sitting_window.geminiApiInput.clear()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save API key: {str(e)}")
+
+    def _save_preference(self, base_url):
+        """Save preference (base_url) to account_config.json"""
+        if not base_url:
+            QMessageBox.warning(self, "Error", "Please enter a base URL!")
+            return
+
+        try:
+            # Load existing config
+            config_data = {}
+            if os.path.exists(config.ACCOUNT_CONFIG_FILE):
+                with open(config.ACCOUNT_CONFIG_FILE) as f:
+                    config_data = json.load(f)
+
+            # Update preference
+            if 'preference' not in config_data:
+                config_data['preference'] = {}
+            config_data['preference']['base_url'] = base_url
+
+            # Save back
+            with open(config.ACCOUNT_CONFIG_FILE, 'w') as f:
+                json.dump(config_data, f, indent=2)
+
+            QMessageBox.information(self, "Success", "Preference saved successfully!\nRestart the app to apply changes.")
+            self.sitting_window.baseUrlInput.clear()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save preference: {str(e)}")
+
+    def _on_launcher_course_double_clicked(self, item):
+        """Handle double-click on launcher course list -> open CourseDetail"""
+        course_name = item.text()
+        courses = self.dm.get('courses')
+        for i, course in enumerate(courses):
+            if course.get('name') == course_name:
+                self.course_detail_mgr = CourseDetailManager(course, self.dm.get('todos'))
+                self.populate_course_detail_window()
+                self._hide_launcher()
+                self.stacked_widget.setCurrentWidget(self.course_detail_window)
+                break
+
     def init_button_bindings(self):
-        """Initialize button bindings"""
-        mw = self.main_window
-        lw = self.login_window
-        tab_widget = mw.consoleTabWidget
+        mw, sw, aw, cdw = self.main_window, self.sitting_window, self.automation_window, self.course_detail_window
+        # Main window
+        for btn, handler in [('backBtn', self._show_launcher),
+                             ('getCookieBtn', lambda: qt_interact.on_get_cookie_clicked(mw.consoleTabWidget, self)),
+                             ('getTodoBtn', lambda: qt_interact.on_get_todo_clicked(mw.consoleTabWidget, self)),
+                             ('getCourseBtn', lambda: qt_interact.on_get_course_clicked(mw.consoleTabWidget, self)),
+                             ('gSyllAllBtn', lambda: qt_interact.on_gsyll_all_clicked(mw.consoleTabWidget)),
+                             ('cleanBtn', self._show_clean_dialog),
+                             ('automationTopBtn', self.on_automation_top_clicked),
+                             ('openFolderBtn', self.on_open_folder_clicked),
+                             ('automationBtn', self.on_automation_clicked),
+                             ('courseDetailBtn', self.on_course_detail_clicked)]:
+            getattr(mw, btn).clicked.connect(handler)
 
-        # Main window buttons
-        mw.loginBtn.clicked.connect(lambda: qt_interact.on_login_clicked(mw, self.stacked_widget, lw))
-        mw.getCookieBtn.clicked.connect(lambda: qt_interact.on_get_cookie_clicked(tab_widget, self))
-        mw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(tab_widget, self))
-        mw.getCourseBtn.clicked.connect(lambda: qt_interact.on_get_course_clicked(tab_widget, self))
-        mw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(tab_widget))
-        mw.automationTopBtn.clicked.connect(self.on_automation_top_clicked)
+        # Sitting window (Settings)
+        sw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
+        sw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(sw.accountInput, sw.passwordInput, sw.keyInput, self.stacked_widget, mw))
+        sw.saveApiBtn.clicked.connect(lambda: self._save_api_key(sw.geminiApiInput.text()))
+        sw.savePrefBtn.clicked.connect(lambda: self._save_preference(sw.baseUrlInput.text()))
 
-        # Login window buttons
-        lw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
-        lw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(
-            lw.accountInput, lw.passwordInput, lw.keyInput, self.stacked_widget, mw
-        ))
-
-        # Automation window buttons
-        aw = self.automation_window
+        # Automation window
         aw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
+        aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(aw.consoleTabWidget, self))
+        aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(aw.consoleTabWidget))
 
-        # Tab close handler
-        tab_widget.tabCloseRequested.connect(self.close_tab)
+        # Course detail window
+        cdw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
+        cdw.openTextbookFolderBtn.clicked.connect(self.on_open_textbook_folder_clicked)
+        cdw.itemList.itemDoubleClicked.connect(self.on_course_detail_item_double_clicked)
 
-        # New action buttons (left sidebar)
-        mw.openFolderBtn.clicked.connect(self.on_open_folder_clicked)
-        mw.automationBtn.clicked.connect(self.on_automation_clicked)
+        # Auto detail window
+        self.auto_detail_window.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
+
+        # Load current login info when sitting window is shown
+        self._load_current_login_info()
+
+        # iOS toggles
+        for toggle in [self.ios_toggle_main, self.ios_toggle_course_detail] + self.ios_toggles_auto:
+            toggle.stateChanged.connect(self.on_toggle_console_clicked)
+        self.history_toggle.stateChanged.connect(self.on_history_toggle_clicked)
+
+        # Console tabs
+        mw.consoleTabWidget.tabCloseRequested.connect(self.close_tab)
+        aw.consoleTabWidget.tabCloseRequested.connect(self.close_automation_tab)
+        for w in [mw.consoleTabWidget, aw.consoleTabWidget]:
+            w.setVisible(False)
+        for t in [self.ios_toggle_main, self.ios_toggle_course_detail] + self.ios_toggles_auto:
+            t.setChecked(False)
 
     def check_status(self):
-        """Status check - auto-refresh cookies if expired, auto-fetch data if empty"""
-        # Get console for logging
-        main_tab = self.main_window.consoleTabWidget.widget(0)
-        console = main_tab.findChild(self.main_window.consoleOutput.__class__) if main_tab else None
-
-        # Check cookie expiry
-        if os.path.exists(config.COOKIES_FILE):
-            file_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(config.COOKIES_FILE))
-            if file_age > timedelta(hours=24):
-                if console:
-                    console.append("[INFO] Cookies expired (>24h), auto-refreshing...")
-                qt_interact.on_get_cookie_clicked(self.main_window.consoleTabWidget)
-
-        # Update status indicators
+        mt = self.main_window.consoleTabWidget.widget(0)
+        console = mt.findChild(self.main_window.consoleOutput.__class__) if mt else None
+        if os.path.exists(config.COOKIES_FILE) and datetime.now() - datetime.fromtimestamp(os.path.getmtime(config.COOKIES_FILE)) > timedelta(hours=24):
+            if console: console.append("[INFO] Cookies expired, auto-refreshing...")
+            qt_interact.on_get_cookie_clicked(self.main_window.consoleTabWidget)
         self.update_status()
         self.update_user_info()
-
-        # Auto-fetch Course and TODO if cookie is valid (green) and data is empty (red)
         status = checkStatus.get_all_status()
-
-        if status['cookie'] == 1:  # Cookie is green (valid)
-            if console:
-                console.append("[INFO] Cookie valid, checking data files...")
-
-            # Auto-fetch courses if empty
-            if status['courses'] == 0:  # Red (empty/missing)
-                if console:
-                    console.append("[INFO] Course list empty, auto-fetching...")
+        if status['cookie'] == 1:
+            if console: console.append("[INFO] Cookie valid, checking data...")
+            if status['courses'] == 0:
+                if console: console.append("[INFO] Fetching courses...")
                 qt_interact.on_get_course_clicked(self.main_window.consoleTabWidget, self)
-
-            # Auto-fetch todos if empty
-            if status['todos'] == 0:  # Red (empty/missing)
-                if console:
-                    console.append("[INFO] TODO list empty, auto-fetching...")
+            if status['todos'] == 0:
+                if console: console.append("[INFO] Fetching todos...")
                 qt_interact.on_get_todo_clicked(self.main_window.consoleTabWidget, self)
 
     def update_status(self):
-        """Update all status indicators"""
         qt_interact.update_status_indicators(self.status_widgets, checkStatus)
 
     def update_user_info(self):
-        """Update user info labels"""
-        mw = self.main_window
-        qt_interact.update_user_info_labels(mw.emailLabel, mw.nameLabel, mw.idLabel)
+        qt_interact.update_user_info_labels(self.main_window.emailLabel, self.main_window.nameLabel, self.main_window.idLabel)
 
     def init_data_viewer(self):
-        """Initialize data viewer (3-column layout)"""
-        # Get widgets
-        category_list = self.main_window.categoryList
-        item_list = self.main_window.itemList
-        detail_view = self.main_window.detailView
+        mw = self.main_window
+        mw.categoryList.addItems(["Courses", "TODOs", "Files"])
+        mw.categoryList.currentRowChanged.connect(self.on_category_changed)
+        mw.itemList.currentRowChanged.connect(self.on_item_changed)
+        mw.itemList.itemChanged.connect(self.on_main_checkbox_changed)
+        mw.itemList.itemDoubleClicked.connect(self.on_main_item_double_clicked)
+        for f in [mw.filterHomework, mw.filterQuiz, mw.filterDiscussion, mw.filterAutomatable]:
+            f.stateChanged.connect(self.apply_filters)
+        mw.courseDetailBtn.setVisible(False)
+        self.dm.load_all()
 
-        # Populate categories
-        category_list.addItems(["Courses", "TODOs", "Files"])
+        # Archive past TODOs on startup
+        try:
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+            from history_manager import archive_past_todos
+            archive_past_todos()
+        except: pass
 
-        # Connect signals
-        category_list.currentRowChanged.connect(self.on_category_changed)
-        item_list.currentRowChanged.connect(self.on_item_changed)
-
-        # Connect filter checkboxes
-        self.main_window.filterHomework.stateChanged.connect(self.apply_filters)
-        self.main_window.filterQuiz.stateChanged.connect(self.apply_filters)
-        self.main_window.filterDiscussion.stateChanged.connect(self.apply_filters)
-        self.main_window.filterAutomatable.stateChanged.connect(self.apply_filters)
-
-        # Load initial data
-        self.current_data = {'courses': [], 'todos': [], 'files': []}
-        self.load_data()
+        # Show launcher after data is loaded
+        self._show_launcher()
 
     def load_data(self):
-        """Load data from JSON files"""
-        import json
-
-        # Load courses
-        if os.path.exists(config.COURSE_FILE):
-            try:
-                with open(config.COURSE_FILE, 'r') as f:
-                    data = json.load(f)
-                    self.current_data['courses'] = data.get('courses', [])
-            except:
-                pass
-
-        # Load todos
-        todos_file = os.path.join(config.ROOT_DIR, 'todos.json')
-        if os.path.exists(todos_file):
-            try:
-                with open(todos_file, 'r') as f:
-                    self.current_data['todos'] = json.load(f)
-            except:
-                pass
-
-        # Load folders from todo_files directory
-        todo_files_dir = os.path.join(config.ROOT_DIR, 'todo_files')
-        if os.path.exists(todo_files_dir):
-            self.current_data['files'] = [
-                f for f in os.listdir(todo_files_dir)
-                if os.path.isdir(os.path.join(todo_files_dir, f))
-            ]
+        self.dm.load_all()
+        self.done_mgr.load()
 
     def on_category_changed(self, index):
-        """Handle category selection change"""
-        from PyQt6.QtWidgets import QListWidgetItem, QWidget, QHBoxLayout, QLabel
-        from PyQt6.QtCore import Qt
+        il = self.main_window.itemList
+        il.clear()
+        self.main_window.courseDetailBtn.setVisible(index == 0)
+        if index == 0:
+            for c in self.dm.get('courses'): il.addItem(c.get('name', 'Unknown'))
+            il.setItemDelegate(QStyledItemDelegate())
+        elif index == 1:
+            # Load history or current todos
+            if self.history_mode:
+                try:
+                    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+                    from history_manager import load_history
+                    todos = load_history()
+                except:
+                    todos = []
+            else:
+                todos = self.dm.get('todos')
 
-        item_list = self.main_window.itemList
-        item_list.clear()
-
-        if index == 0:  # Courses
-            for course in self.current_data['courses']:
-                item_list.addItem(course.get('name', 'Unknown'))
-
-        elif index == 1:  # TODOs - with indicator dots
-            for todo in self.current_data['todos']:
-                assignment_details = todo.get('assignment_details', {})
+            for todo in todos:
+                item = QListWidgetItem(f"{todo.get('course_name', '')} - {todo.get('name', '')}")
+                item.setData(Qt.ItemDataRole.UserRole, self.dm.classify_todo(todo))
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 redirect_url = todo.get('redirect_url', '')
-                submission_types = assignment_details.get('type', [])
-
-                # Determine item type and automation capability
-                is_quiz = 'quiz' in redirect_url.lower()
-                is_discussion = 'discussion' in redirect_url.lower()
-                is_automatable = (
-                    'online_quiz' in submission_types or
-                    'online_upload' in submission_types or
-                    'online_text_entry' in submission_types or
-                    'discussion_topic' in submission_types
-                )
-
-                # Build display text
-                display_text = f"{todo.get('course_name', '')} - {todo.get('name', '')}"
-
-                # Create list item
-                item = QListWidgetItem(display_text)
-
-                # Store metadata for filtering
-                item.setData(Qt.ItemDataRole.UserRole, {
-                    'is_quiz': is_quiz,
-                    'is_discussion': is_discussion,
-                    'is_automatable': is_automatable,
-                    'is_homework': not (is_quiz or is_discussion),
-                    'dots': {
-                        'homework': not (is_quiz or is_discussion),
-                        'quiz': is_quiz,
-                        'discussion': is_discussion,
-                        'automatable': is_automatable
-                    }
-                })
-
-                item_list.addItem(item)
-
-            # Set custom delegate for rendering dots
-            from PyQt6.QtWidgets import QStyledItemDelegate
-            from PyQt6.QtGui import QPainter, QColor
-            from PyQt6.QtCore import QRect, QPoint
-
-            class TodoItemDelegate(QStyledItemDelegate):
-                def paint(self, painter, option, index):
-                    # Draw default item (text + background)
-                    super().paint(painter, option, index)
-
-                    # Get metadata
-                    metadata = index.data(Qt.ItemDataRole.UserRole)
-                    if not metadata or 'dots' not in metadata:
-                        return
-
-                    dots = metadata['dots']
-
-                    # Draw dots on the right
-                    painter.save()
-                    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-                    dot_size = 10
-                    dot_spacing = 6
-                    right_margin = 10
-                    x = option.rect.right() - right_margin
-
-                    # Draw dots from right to left
-                    # Automatable (red)
-                    if dots.get('automatable'):
-                        x -= dot_size
-                        painter.setBrush(QColor(239, 68, 68))  # #ef4444
-                        painter.setPen(QColor(239, 68, 68))
-                        painter.drawEllipse(QPoint(x + dot_size // 2, option.rect.center().y()), dot_size // 2, dot_size // 2)
-                        x -= dot_spacing
-
-                    # Discussion (blue)
-                    if dots.get('discussion'):
-                        x -= dot_size
-                        painter.setBrush(QColor(59, 130, 246))  # #3b82f6
-                        painter.setPen(QColor(59, 130, 246))
-                        painter.drawEllipse(QPoint(x + dot_size // 2, option.rect.center().y()), dot_size // 2, dot_size // 2)
-                        x -= dot_spacing
-
-                    # Quiz (purple)
-                    if dots.get('quiz'):
-                        x -= dot_size
-                        painter.setBrush(QColor(168, 85, 247))  # #a855f7
-                        painter.setPen(QColor(168, 85, 247))
-                        painter.drawEllipse(QPoint(x + dot_size // 2, option.rect.center().y()), dot_size // 2, dot_size // 2)
-                        x -= dot_spacing
-
-                    # Homework (yellow)
-                    if dots.get('homework'):
-                        x -= dot_size
-                        painter.setBrush(QColor(234, 179, 8))  # #eab308
-                        painter.setPen(QColor(234, 179, 8))
-                        painter.drawEllipse(QPoint(x + dot_size // 2, option.rect.center().y()), dot_size // 2, dot_size // 2)
-
-                    painter.restore()
-
-                def sizeHint(self, option, index):
-                    size = super().sizeHint(option, index)
-                    size.setHeight(max(size.height(), 36))
-                    return size
-
-            item_list.setItemDelegate(TodoItemDelegate(item_list))
-
-        elif index == 2:  # Files
-            item_list.addItems(self.current_data['files'])
+                is_done = self.done_mgr.is_done(redirect_url)
+                item.setCheckState(Qt.CheckState.Checked if is_done else Qt.CheckState.Unchecked)
+                item.setForeground(Qt.GlobalColor.gray if is_done else Qt.GlobalColor.white)
+                item.setData(Qt.ItemDataRole.UserRole + 1, todo)
+                il.addItem(item)
+            il.setItemDelegate(delegates.TodoItemDelegate(il, history_mode=self.history_mode))
+        elif index == 2:
+            il.addItems(self.dm.get('files'))
+            il.setItemDelegate(QStyledItemDelegate())
 
     def apply_filters(self):
-        """Apply filters to TODO list items (OR logic)"""
-        from PyQt6.QtCore import Qt
-
-        # Only apply filters if TODOs category is selected
-        if self.main_window.categoryList.currentRow() != 1:
-            return
-
-        item_list = self.main_window.itemList
-
-        # Get filter states
-        filter_homework = self.main_window.filterHomework.isChecked()
-        filter_quiz = self.main_window.filterQuiz.isChecked()
-        filter_discussion = self.main_window.filterDiscussion.isChecked()
-        filter_automatable = self.main_window.filterAutomatable.isChecked()
-
-        # If no filters are selected, show all items
-        show_all = not (filter_homework or filter_quiz or filter_discussion or filter_automatable)
-
-        # Apply filter to each item
-        for i in range(item_list.count()):
-            item = item_list.item(i)
-            metadata = item.data(Qt.ItemDataRole.UserRole)
-
-            if not metadata:
-                continue
-
-            # OR logic: show if matches ANY selected filter
-            should_show = show_all or (
-                (filter_homework and metadata.get('is_homework', False)) or
-                (filter_quiz and metadata.get('is_quiz', False)) or
-                (filter_discussion and metadata.get('is_discussion', False)) or
-                (filter_automatable and metadata.get('is_automatable', False))
-            )
-
-            item.setHidden(not should_show)
+        if self.main_window.categoryList.currentRow() != 1: return
+        il, mw = self.main_window.itemList, self.main_window
+        filters = [mw.filterHomework.isChecked(), mw.filterQuiz.isChecked(), mw.filterDiscussion.isChecked(), mw.filterAutomatable.isChecked()]
+        show_all = not any(filters)
+        for i in range(il.count()):
+            item, m = il.item(i), il.item(i).data(Qt.ItemDataRole.UserRole)
+            if m:
+                matches = [m.get('is_homework'), m.get('is_quiz'), m.get('is_discussion'), m.get('is_automatable')]
+                item.setHidden(not (show_all or any(f and v for f, v in zip(filters, matches))))
 
     def on_item_changed(self, index):
-        """Handle item selection change - display details"""
-        if index < 0:
-            return
+        if index < 0: return
+        ci = self.main_window.categoryList.currentRow()
 
-        category_index = self.main_window.categoryList.currentRow()
-        detail_view = self.main_window.detailView
-
-        if category_index == 0:  # Course details
-            if index < len(self.current_data['courses']):
-                course = self.current_data['courses'][index]
-                detail_view.setHtml(self._format_course_details(course))
-        elif category_index == 1:  # TODO details
-            if index < len(self.current_data['todos']):
-                todo = self.current_data['todos'][index]
-                detail_view.setHtml(self._format_todo_details(todo))
-        elif category_index == 2:  # File details
-            if index < len(self.current_data['files']):
-                filename = self.current_data['files'][index]
-                detail_view.setHtml(self._format_file_details(filename))
-
-    def _format_course_details(self, course):
-        """Format course data as HTML (dynamic - shows all fields)"""
-        html = f"<h2 style='color: #3b82f6;'>{course.get('name', 'Unknown Course')}</h2>"
-        html += "<div style='font-family: monospace; font-size: 13px;'>"
-
-        for key, value in course.items():
-            if key == 'name':
-                continue
-            if isinstance(value, dict):
-                html += f"<p><strong>{key}:</strong></p><ul>"
-                for sub_key, sub_value in value.items():
-                    html += f"<li>{sub_key}: <span style='color: #22c55e;'>{sub_value}</span></li>"
-                html += "</ul>"
-            else:
-                html += f"<p><strong>{key}:</strong> {value}</p>"
-
-        html += "</div>"
-        return html
-
-    def _format_todo_details(self, todo):
-        """Format TODO data as HTML (dynamic - shows all fields)"""
-        assignment_details = todo.get('assignment_details', {})
-        redirect_url = todo.get('redirect_url', '')
-        submission_types = assignment_details.get('type', [])
-
-        # Determine type and color
-        is_quiz = 'quiz' in redirect_url.lower()
-        is_discussion = 'discussion' in redirect_url.lower()
-        is_automatable = (
-            'online_quiz' in submission_types or
-            'online_upload' in submission_types or
-            'online_text_entry' in submission_types or
-            'discussion_topic' in submission_types
-        )
-
-        # Choose title color
-        if is_automatable:
-            title_color = '#ef4444'  # Red
-            type_label = '🤖 AUTOMATABLE'
-        elif is_quiz:
-            title_color = '#a855f7'  # Purple
-            type_label = '📝 QUIZ'
-        elif is_discussion:
-            title_color = '#3b82f6'  # Blue
-            type_label = '💬 DISCUSSION'
+        # Get correct data source based on history mode
+        if ci == 1 and self.history_mode:
+            try:
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+                from history_manager import load_history
+                data = load_history()
+            except:
+                data = []
         else:
-            title_color = '#eab308'  # Yellow
-            type_label = '📚 HOMEWORK'
+            data = self.dm.get(['courses', 'todos', 'files'][ci])
 
-        html = f"<h2 style='color: {title_color};'>{todo.get('name', 'Unknown TODO')} <span style='font-size: 14px;'>[{type_label}]</span></h2>"
-        html += f"<h3 style='color: #aaa;'>{todo.get('course_name', '')}</h3>"
+        if index < len(data):
+            self.main_window.detailView.setHtml([formatters.format_course, formatters.format_todo, formatters.format_folder][ci](data[index]))
 
-        # Add color legend
-        html += "<div style='background: #1a1a1a; padding: 10px; border-radius: 6px; margin-bottom: 10px;'>"
-        html += "<strong>Legend:</strong> "
-        html += "<span style='color: #ef4444;'>🤖 Automatable</span> | "
-        html += "<span style='color: #a855f7;'>📝 Quiz</span> | "
-        html += "<span style='color: #3b82f6;'>💬 Discussion</span> | "
-        html += "<span style='color: #eab308;'>📚 Homework</span>"
-        html += "</div>"
+    def _update_checkbox(self, item, is_checked):
+        todo = item.data(Qt.ItemDataRole.UserRole + 1 if hasattr(item.data(Qt.ItemDataRole.UserRole + 1), 'get') else Qt.ItemDataRole.UserRole)
+        if not todo or not todo.get('redirect_url'): return
+        (self.done_mgr.mark_done if is_checked else self.done_mgr.mark_undone)(todo['redirect_url'])
+        item.setForeground(Qt.GlobalColor.gray if is_checked else Qt.GlobalColor.white)
 
-        html += "<div style='font-family: monospace; font-size: 13px;'>"
+    def on_main_checkbox_changed(self, item):
+        self._update_checkbox(item, item.checkState() == Qt.CheckState.Checked)
 
-        # Top-level fields
-        for key, value in todo.items():
-            if key in ['name', 'course_name', 'assignment_details']:
-                continue
-            html += f"<p><strong>{key}:</strong> {value}</p>"
+    def on_main_item_double_clicked(self, item):
+        ci = self.main_window.categoryList.currentRow()
+        if ci == 0:
+            ii = self.main_window.itemList.currentRow()
+            if ii >= 0:
+                courses = self.dm.get('courses')
+                if ii < len(courses):
+                    self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+                    self.populate_course_detail_window()
+                    self.stacked_widget.setCurrentWidget(self.course_detail_window)
+        elif ci == 1:
+            # TODO double-click: check if Tab2 (automatable), then jump to autoDetail
+            todo = item.data(Qt.ItemDataRole.UserRole + 1)
+            if todo:
+                meta = self.dm.classify_todo(todo)
+                if meta.get('is_automatable'):
+                    self.auto_detail_mgr = AutoDetailManager(todo)
+                    self.populate_auto_detail_window()
+                    self.stacked_widget.setCurrentWidget(self.auto_detail_window)
 
-        # Assignment details
-        if 'assignment_details' in todo:
-            html += "<hr><h3>Assignment Details:</h3>"
-            details = todo['assignment_details']
-            for key, value in details.items():
-                if key == 'files' and value:
-                    html += "<p><strong>Files:</strong></p><ul>"
-                    for file in value:
-                        html += f"<li>{file.get('filename', 'Unknown')}</li>"
-                    html += "</ul>"
-                elif isinstance(value, list):
-                    html += f"<p><strong>{key}:</strong> {', '.join(str(v) for v in value)}</p>"
-                else:
-                    html += f"<p><strong>{key}:</strong> {value}</p>"
+    def on_toggle_console_clicked(self, state):
+        visible = (state == Qt.CheckState.Checked.value)
+        self.main_window.consoleTabWidget.setVisible(visible)
+        self.automation_window.consoleTabWidget.setVisible(visible)
+        for toggle in [self.ios_toggle_main, self.ios_toggle_course_detail] + self.ios_toggles_auto:
+            toggle.blockSignals(True)
+            toggle.setChecked(visible)
+            toggle.blockSignals(False)
 
-        html += "</div>"
-        return html
-
-    def _format_file_details(self, foldername):
-        """Format folder details as HTML (shows files inside)"""
-        folder_path = os.path.join(config.ROOT_DIR, 'todo_files', foldername)
-
-        html = f"<h2 style='color: #22c55e;'>{foldername}</h2>"
-        html += "<div style='font-family: monospace; font-size: 13px;'>"
-        html += f"<p><strong>Path:</strong> {folder_path}</p>"
-
-        # List files in folder
-        if os.path.exists(folder_path):
-            files = [f for f in os.listdir(folder_path) if os.path.isfile(os.path.join(folder_path, f))]
-            if files:
-                html += f"<p><strong>Files ({len(files)}):</strong></p><ul>"
-                for file in sorted(files):
-                    file_path = os.path.join(folder_path, file)
-                    size = os.path.getsize(file_path)
-                    html += f"<li>{file} <span style='color: #aaa;'>({size:,} bytes)</span></li>"
-                html += "</ul>"
-            else:
-                html += "<p><em>No files in folder</em></p>"
-
-        html += "</div>"
-        return html
+    def on_history_toggle_clicked(self, state):
+        self.history_mode = (state == Qt.CheckState.Checked.value)
+        if self.main_window.categoryList.currentRow() == 1:
+            self.on_category_changed(1)
 
     def on_open_folder_clicked(self):
-        """Open the folder for selected item"""
-        category_index = self.main_window.categoryList.currentRow()
-        item_index = self.main_window.itemList.currentRow()
-
-        if category_index < 0 or item_index < 0:
-            return
-
-        folder_path = None
-
-        if category_index == 1:  # TODOs - open assignment folder
-            if item_index < len(self.current_data['todos']):
-                todo = self.current_data['todos'][item_index]
-                folder_name = todo.get('assignment_details', {}).get('folder')
-                if folder_name:
-                    folder_path = os.path.join(config.ROOT_DIR, 'todo_files', folder_name)
-
-        elif category_index == 2:  # Files - open selected folder
-            if item_index < len(self.current_data['files']):
-                folder_name = self.current_data['files'][item_index]
-                folder_path = os.path.join(config.ROOT_DIR, 'todo_files', folder_name)
-
-        # Open folder in file explorer
-        if folder_path and os.path.exists(folder_path):
-            import subprocess
-            import platform
-            system = platform.system()
-            if system == 'Windows':
-                os.startfile(folder_path)
-            elif system == 'Darwin':  # macOS
-                subprocess.run(['open', folder_path])
-            else:  # Linux
-                subprocess.run(['xdg-open', folder_path])
+        ci, ii = self.main_window.categoryList.currentRow(), self.main_window.itemList.currentRow()
+        if ci < 0 or ii < 0: return
+        fp = None
+        if ci == 1 and ii < len(self.dm.get('todos')):
+            fn = self.dm.get('todos')[ii].get('assignment_details', {}).get('folder')
+            fp = os.path.join(config.ROOT_DIR, 'todo_files', fn) if fn else None
+        elif ci == 2 and ii < len(self.dm.get('files')):
+            fp = os.path.join(config.ROOT_DIR, 'todo_files', self.dm.get('files')[ii])
+        if fp and os.path.exists(fp):
+            self._open_folder(fp)
 
     def on_automation_clicked(self):
-        """Automation button (left sidebar) - check if selected TODO is automatable"""
-        from PyQt6.QtWidgets import QMessageBox
-        from PyQt6.QtCore import Qt
-
-        # Check if TODO is selected
-        category_index = self.main_window.categoryList.currentRow()
-        item_index = self.main_window.itemList.currentRow()
-
-        if category_index != 1:  # Not TODOs category
-            QMessageBox.warning(self, "Invalid Selection", "Please select a TODO item first.")
-            return
-
-        if item_index < 0:
-            QMessageBox.warning(self, "No Selection", "Please select a TODO item first.")
-            return
-
-        # Get selected item metadata
-        item = self.main_window.itemList.item(item_index)
-        metadata = item.data(Qt.ItemDataRole.UserRole)
-
-        if not metadata or not metadata.get('is_automatable'):
-            QMessageBox.warning(
-                self,
-                "Not Automatable",
-                "This TODO item is not automatable.\n\nOnly items with online submission types can be automated."
-            )
-            return
-
-        # Find the actual TODO data by matching the visible item index
-        # We need to count visible items to get the correct TODO
-        visible_count = 0
-        selected_todo = None
-        for todo in self.current_data['todos']:
-            # Check if this item would be visible (apply same logic as on_category_changed)
-            assignment_details = todo.get('assignment_details', {})
-            redirect_url = todo.get('redirect_url', '')
-
-            is_quiz = 'quiz' in redirect_url.lower()
-            is_discussion = 'discussion' in redirect_url.lower()
-
-            if visible_count == item_index:
-                selected_todo = todo
-                break
-            visible_count += 1
-
-        if selected_todo:
-            # Navigate to automation page with selected item
-            self.populate_automation_window(selected_todo=selected_todo)
+        ci, ii = self.main_window.categoryList.currentRow(), self.main_window.itemList.currentRow()
+        if ci != 1: return QMessageBox.warning(self, "Invalid", "Select a TODO first.")
+        if ii < 0: return QMessageBox.warning(self, "No Selection", "Select a TODO first.")
+        if not (self.main_window.itemList.item(ii).data(Qt.ItemDataRole.UserRole) or {}).get('is_automatable'):
+            return QMessageBox.warning(self, "Not Automatable", "Only online submission types can be automated.")
+        todos = self.dm.get('todos')
+        if ii < len(todos):
+            self.populate_automation_window(selected_todo=todos[ii])
             self.stacked_widget.setCurrentWidget(self.automation_window)
 
     def on_automation_top_clicked(self):
-        """Automation button (top bar) - navigate to automation page"""
         self.populate_automation_window()
         self.stacked_widget.setCurrentWidget(self.automation_window)
 
     def populate_automation_window(self, selected_todo=None):
-        """Populate automation window with categorized TODOs"""
-        from PyQt6.QtCore import Qt
-
         aw = self.automation_window
+        lists = [[aw.automatableOpenCategoryList, aw.automatableOpenItemList, aw.automatableOpenDetailView],
+                 [aw.automatableCloseCategoryList, aw.automatableCloseItemList, aw.automatableCloseDetailView],
+                 [aw.automatableCategoryList, aw.automatableItemList, aw.automatableDetailView],
+                 [aw.allItemsCategoryList, aw.allItemsItemList, aw.allItemsDetailView]]
 
-        # Clear all lists
-        aw.allItemsCategoryList.clear()
-        aw.allItemsItemList.clear()
-        aw.allItemsDetailView.clear()
-        aw.automatableCategoryList.clear()
-        aw.automatableItemList.clear()
-        aw.automatableDetailView.clear()
+        for lst_group in lists:
+            for lst in lst_group: lst.clear()
+            lst_group[0].addItems(["Homework", "Quiz", "Discussion", "All"])
+            try:
+                for lst in lst_group[:2]:
+                    lst.currentRowChanged.disconnect()
+                    lst.itemChanged.disconnect()
+            except: pass
 
-        # Add categories to both tabs
-        aw.allItemsCategoryList.addItems(["Homework", "Quiz", "Discussion"])
-        aw.automatableCategoryList.addItems(["Homework", "Quiz", "Discussion"])
+        for idx, lst_group in enumerate(lists):
+            lst_group[0].currentRowChanged.connect(lambda i, t=idx: self.on_automation_category_changed(i, t))
+            lst_group[1].currentRowChanged.connect(lambda i, t=idx: self.on_automation_item_changed(i, t))
+            lst_group[1].itemChanged.connect(self.on_automation_checkbox_changed)
+            lst_group[1].itemDoubleClicked.connect(self.on_automation_item_double_clicked)
 
-        # Disconnect all signals first
-        try:
-            aw.allItemsCategoryList.currentRowChanged.disconnect()
-            aw.allItemsItemList.currentRowChanged.disconnect()
-            aw.automatableCategoryList.currentRowChanged.disconnect()
-            aw.automatableItemList.currentRowChanged.disconnect()
-        except:
-            pass
-
-        # Connect signals for Tab1 (All Items)
-        aw.allItemsCategoryList.currentRowChanged.connect(
-            lambda idx: self.on_automation_category_changed(idx, automatable_only=False)
-        )
-        aw.allItemsItemList.currentRowChanged.connect(
-            lambda idx: self.on_automation_item_changed(idx, automatable_only=False)
-        )
-
-        # Connect signals for Tab2 (Automatable Only)
-        aw.automatableCategoryList.currentRowChanged.connect(
-            lambda idx: self.on_automation_category_changed(idx, automatable_only=True)
-        )
-        aw.automatableItemList.currentRowChanged.connect(
-            lambda idx: self.on_automation_item_changed(idx, automatable_only=True)
-        )
-
-        # If a specific TODO is selected, navigate to it
         if selected_todo:
-            redirect_url = selected_todo.get('redirect_url', '')
-            is_quiz = 'quiz' in redirect_url.lower()
-            is_discussion = 'discussion' in redirect_url.lower()
-
-            # Determine category index
-            if is_quiz:
-                category_idx = 1  # Quiz
-            elif is_discussion:
-                category_idx = 2  # Discussion
-            else:
-                category_idx = 0  # Homework
-
-            # Switch to Automatable tab and select category
-            aw.mainTabWidget.setCurrentIndex(1)  # Tab2: Automatable Only
-            aw.automatableCategoryList.setCurrentRow(category_idx)
-
-            # Find and select the item in the list
-            item_list = aw.automatableItemList
-            for i in range(item_list.count()):
-                item = item_list.item(i)
-                todo_data = item.data(Qt.ItemDataRole.UserRole)
-                if todo_data and todo_data.get('redirect_url') == selected_todo.get('redirect_url'):
-                    item_list.setCurrentRow(i)
+            url = selected_todo.get('redirect_url', '').lower()
+            ci = 1 if 'quiz' in url else 2 if 'discussion' in url else 0
+            aw.mainTabWidget.setCurrentIndex(0)
+            lists[0][0].setCurrentRow(ci)
+            for i in range(lists[0][1].count()):
+                if lists[0][1].item(i).data(Qt.ItemDataRole.UserRole).get('redirect_url') == selected_todo.get('redirect_url'):
+                    lists[0][1].setCurrentRow(i)
                     break
         else:
-            # Default: select first category in Tab1
-            aw.allItemsCategoryList.setCurrentRow(0)
+            lists[0][0].setCurrentRow(0)
 
-    def on_automation_category_changed(self, index, automatable_only=False):
-        """Handle automation category selection change"""
-        from PyQt6.QtWidgets import QListWidgetItem
-        from PyQt6.QtCore import Qt
-
+    def on_automation_category_changed(self, index, tab_index=3):
+        if index < 0: return
         aw = self.automation_window
+        il = [aw.automatableOpenItemList, aw.automatableCloseItemList, aw.automatableItemList, aw.allItemsItemList][tab_index]
+        il.clear()
+        for todo in self.dm.get('todos'):
+            meta = self.dm.classify_todo(todo)
+            # Filter logic
+            if tab_index == 0 and not (meta['is_automatable'] and meta['is_open']): continue
+            if tab_index == 1 and not (meta['is_automatable'] and not meta['is_open']): continue
+            if tab_index == 2 and not meta['is_automatable']: continue
+            if index != 3 and not [meta['is_homework'], meta['is_quiz'], meta['is_discussion']][index]: continue
 
-        # Select the appropriate lists based on tab
-        if automatable_only:
-            item_list = aw.automatableItemList
-        else:
-            item_list = aw.allItemsItemList
-
-        item_list.clear()
-
-        if index < 0:
-            return
-
-        # Filter TODOs based on category
-        for todo in self.current_data['todos']:
-            assignment_details = todo.get('assignment_details', {})
+            item = QListWidgetItem(f"{todo.get('course_name', '')} - {todo.get('name', '')}")
+            item.setData(Qt.ItemDataRole.UserRole, todo)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             redirect_url = todo.get('redirect_url', '')
-            submission_types = assignment_details.get('type', [])
+            is_done = self.done_mgr.is_done(redirect_url)
+            item.setCheckState(Qt.CheckState.Checked if is_done else Qt.CheckState.Unchecked)
+            item.setForeground(Qt.GlobalColor.gray if is_done else Qt.GlobalColor.white)
+            il.addItem(item)
 
-            # Determine item type
-            is_quiz = 'quiz' in redirect_url.lower()
-            is_discussion = 'discussion' in redirect_url.lower()
-            is_homework = not (is_quiz or is_discussion)
-            is_automatable = (
-                'online_quiz' in submission_types or
-                'online_upload' in submission_types or
-                'online_text_entry' in submission_types or
-                'discussion_topic' in submission_types
-            )
+    def on_automation_item_changed(self, index, tab_index=3):
+        if index < 0: return
+        aw = self.automation_window
+        il = [aw.automatableOpenItemList, aw.automatableCloseItemList, aw.automatableItemList, aw.allItemsItemList][tab_index]
+        dv = [aw.automatableOpenDetailView, aw.automatableCloseDetailView, aw.automatableDetailView, aw.allItemsDetailView][tab_index]
+        todo = il.item(index).data(Qt.ItemDataRole.UserRole)
+        if todo: dv.setHtml(formatters.format_todo(todo))
 
-            # Skip non-automatable items if in automatable-only mode
-            if automatable_only and not is_automatable:
-                continue
+    def on_automation_checkbox_changed(self, item):
+        self._update_checkbox(item, item.checkState() == Qt.CheckState.Checked)
 
-            # Filter by category
-            should_show = False
-            if index == 0:  # Homework
-                should_show = is_homework
-            elif index == 1:  # Quiz
-                should_show = is_quiz
-            elif index == 2:  # Discussion
-                should_show = is_discussion
+    def on_automation_item_double_clicked(self, item):
+        """Handle double-click on automation window TODO item -> jump to autoDetail"""
+        todo = item.data(Qt.ItemDataRole.UserRole)
+        if todo:
+            self.auto_detail_mgr = AutoDetailManager(todo)
+            self.populate_auto_detail_window()
+            self.stacked_widget.setCurrentWidget(self.auto_detail_window)
 
-            if should_show:
-                # Build display text
-                display_text = f"{todo.get('course_name', '')} - {todo.get('name', '')}"
-                item = QListWidgetItem(display_text)
+    def on_course_detail_clicked(self):
+        ci, ii = self.main_window.categoryList.currentRow(), self.main_window.itemList.currentRow()
+        if ci != 0: return QMessageBox.warning(self, "Invalid", "Please select a Course first.")
+        if ii < 0: return QMessageBox.warning(self, "No Selection", "Please select a course first.")
+        courses = self.dm.get('courses')
+        if ii >= len(courses): return QMessageBox.warning(self, "Error", "Invalid course selection.")
+        self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+        self.populate_course_detail_window()
+        self.stacked_widget.setCurrentWidget(self.course_detail_window)
 
-                # Store full TODO data for detail view
-                item.setData(Qt.ItemDataRole.UserRole, todo)
-                item_list.addItem(item)
+    def populate_course_detail_window(self):
+        if not self.course_detail_mgr: return
+        cdw = self.course_detail_window
+        try:
+            cdw.categoryList.currentRowChanged.disconnect()
+            cdw.itemList.currentRowChanged.disconnect()
+        except: pass
 
-    def on_automation_item_changed(self, index, automatable_only=False):
-        """Handle automation item selection change - display details"""
-        from PyQt6.QtCore import Qt
+        cdw.courseNameLabel.setText(self.course_detail_mgr.get_course_name())
+        for w in [cdw.categoryList, cdw.itemList, cdw.detailView]: w.clear()
+        categories = self.course_detail_mgr.get_categories()
+        cdw.categoryList.addItems(categories)
+        cdw.categoryList.currentRowChanged.connect(self.on_course_detail_category_changed)
+        cdw.itemList.currentRowChanged.connect(self.on_course_detail_item_changed)
+        self._prefetch_all_tabs()
+        if categories:
+            cdw.categoryList.setCurrentRow(0)
+            cdw.categoryList.setFocus()  # Default focus for full keyboard navigation
 
-        if index < 0:
+    def populate_auto_detail_window(self):
+        """Populate autoDetail window with TODO data"""
+        if not self.auto_detail_mgr: return
+        adw = self.auto_detail_window
+
+        # Populate top bar identification
+        info = self.auto_detail_mgr.get_identification_info()
+        adw.courseNameLabel.setText(f"Course: {info['course']}")
+        adw.assignmentNameLabel.setText(f"Assignment: {info['assignment']}")
+        adw.typeLabel.setText(f"Type: {info['type']}")
+        adw.dueDateLabel.setText(f"Due: {info['due_date']}")
+
+        # Populate left panel - assignment detail
+        adw.assignmentDetailView.setHtml(self.auto_detail_mgr.get_assignment_detail_html())
+
+        # Populate left panel - reference files
+        adw.refFilesView.setHtml(self.auto_detail_mgr.get_reference_files_html())
+
+        # Show/hide control console based on type
+        is_quiz = self.auto_detail_mgr.is_quiz
+        is_homework = self.auto_detail_mgr.is_homework
+
+        adw.quizControlWidget.setVisible(is_quiz)
+        adw.hwControlWidget.setVisible(is_homework)
+
+        # Populate right panel (AI preview or placeholder)
+        preview_html = self._load_auto_detail_preview()
+        adw.aiPreviewView.setHtml(preview_html if preview_html else self.auto_detail_mgr.get_preview_placeholder_html())
+        adw.previewStatusLabel.setText("Status: Preview loaded" if preview_html else "Status: No preview generated yet")
+
+        # Clear prompt edit box (can be customized later)
+        adw.promptEditBox.clear()
+
+    def _load_auto_detail_preview(self):
+        """Load AI preview (quiz or homework) if files exist"""
+        if not self.auto_detail_mgr: return None
+
+        if self.auto_detail_mgr.is_quiz:
+            # Try to load quiz preview from QUIZ_RES_DIR
+            preview_dir = config.QUIZ_RES_DIR
+            if os.path.exists(preview_dir):
+                return self.auto_detail_mgr.load_quiz_preview(preview_dir)
+        elif self.auto_detail_mgr.is_homework:
+            # Try to load homework preview from OUTPUT_DIR
+            output_dir = config.SUBMISSION_DIR
+            if os.path.exists(output_dir):
+                return self.auto_detail_mgr.load_homework_preview(output_dir)
+
+        return None
+
+    def on_course_detail_category_changed(self, index):
+        if index < 0 or not self.course_detail_mgr: return
+        cdw = self.course_detail_window
+        cdw.itemList.clear()
+        cdw.detailView.clear()
+        category = cdw.categoryList.item(index).text()
+        cdw.openTextbookFolderBtn.setVisible(category == 'Textbook')
+        items = self.course_detail_mgr.get_items_for_category(category)
+
+        for item_data in items:
+            item = QListWidgetItem(item_data['name'])
+            item.setData(Qt.ItemDataRole.UserRole, item_data.get('has_file', False))
+            item.setData(Qt.ItemDataRole.UserRole + 1, item_data)
+            if item_data.get('is_done', False): item.setForeground(Qt.GlobalColor.gray)
+            cdw.itemList.addItem(item)
+
+        cdw.itemList.setItemDelegate(delegates.FileItemDelegate(cdw.itemList) if category in ['Syllabus', 'Textbook'] else QStyledItemDelegate())
+        cdw.itemList.viewport().update()
+
+    def on_course_detail_item_changed(self, index):
+        if index < 0 or not self.course_detail_mgr: return
+        cdw = self.course_detail_window
+        item_data = cdw.itemList.item(index).data(Qt.ItemDataRole.UserRole + 1)
+        if not item_data: return
+
+        item_type, data = item_data.get('type'), item_data.get('data')
+        if item_type == 'tab':
+            tab_name, url = data.get('tab_name'), data.get('url')
+            if tab_name and url:
+                self._load_or_fetch_tab(tab_name, url)
             return
 
-        aw = self.automation_window
+        html_map = {
+            'intro': lambda: formatters.format_course(data),
+            'todo': lambda: formatters.format_todo(data),
+            'syllabus': lambda: f"<h2 style='color: #22c55e;'>Syllabus</h2><p><a href='{data['url']}'>{data['url']}</a></p><p>Folder: {data['local_dir']}</p>",
+            'textbook_file': lambda: f"<h2>{data['filename']}</h2><p>{data['path']}</p>",
+            'placeholder': lambda: f"<p>No textbook files</p><p>Folder: {data['folder']}</p>"
+        }
+        cdw.detailView.setHtml(html_map.get(item_type, lambda: "<p>No details</p>")())
 
-        # Select the appropriate widgets based on tab
-        if automatable_only:
-            item_list = aw.automatableItemList
-            detail_view = aw.automatableDetailView
+    def on_open_textbook_folder_clicked(self):
+        if not self.course_detail_mgr: return
+        self._open_folder(self.course_detail_mgr.get_textbook_dir())
+
+    def on_course_detail_item_double_clicked(self, item):
+        if not self.course_detail_mgr: return
+        item_data = item.data(Qt.ItemDataRole.UserRole + 1)
+        if not item_data: return
+
+        item_type, data = item_data.get('type'), item_data.get('data')
+        if item_type == 'syllabus' and item_data.get('has_file'):
+            syll_dir = data.get('local_dir')
+            if syll_dir and os.path.exists(syll_dir):
+                self._open_folder(syll_dir)
+        elif item_type == 'textbook_file':
+            file_path = data.get('path')
+            if file_path and os.path.exists(file_path):
+                self._open_folder(os.path.dirname(file_path))
+
+    def _prefetch_all_tabs(self):
+        """Prefetch all missing tabs in background"""
+        def worker():
+            tabs = self.course_detail_mgr.course.get('tabs', {})
+            tabs_dir = os.path.join(self.course_detail_mgr.course_dir, 'Tabs')
+            os.makedirs(tabs_dir, exist_ok=True)
+            s = self._create_session()
+
+            for name, path in tabs.items():
+                safe = "".join(c if c.isalnum() or c in (' ','_') else '_' for c in name)
+                md_path = os.path.join(tabs_dir, f"{safe}.md")
+                if os.path.exists(md_path): continue
+
+                try:
+                    url = f"{config.CANVAS_BASE_URL}{path}"
+                    r = s.get(url, timeout=10)
+                    soup = BeautifulSoup(r.text, 'html.parser')
+                    md = self._parse_special_page(name, r.text, soup) if 'grades' in name.lower() or self._is_modules_page(r.text, soup) else self._html_to_md(soup)
+                    if md:
+                        with open(md_path, 'w', encoding='utf-8') as f:
+                            f.write(f"# {name}\n\nSource: {url}\n\n---\n\n{md}")
+                        print(f"[INFO] Prefetched {name}")
+                except: pass
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _load_or_fetch_tab(self, tab_name, url):
+        safe_tab_name = "".join(c if c.isalnum() or c in (' ', '_') else '_' for c in tab_name)
+        md_path = os.path.join(self.course_detail_mgr.course_dir, 'Tabs', f"{safe_tab_name}.md")
+
+        if os.path.exists(md_path):
+            try:
+                with open(md_path, 'r', encoding='utf-8') as f:
+                    self.tab_content_signal.update_html.emit(f"MARKDOWN:{f.read()}")
+            except Exception as e:
+                self.course_detail_window.detailView.setHtml(f"<h2 style='color: #ef4444;'>Error</h2><p>{e}</p>")
         else:
-            item_list = aw.allItemsItemList
-            detail_view = aw.allItemsDetailView
+            self.course_detail_window.detailView.setHtml(f"<h2 style='color: #eab308;'>Loading...</h2><p>Fetching {tab_name}...</p>")
+            self._fetch_tab_content(tab_name, url)
 
-        # Get selected item data
-        item = item_list.item(index)
-        todo = item.data(Qt.ItemDataRole.UserRole)
+    def _update_course_detail_html(self, html):
+        if html.startswith("MARKDOWN:"):
+            md_content = html[9:]
+            lines = md_content.split('\n', 1)
+            title = lines[0].strip('# ')
+            body = lines[1] if len(lines) > 1 else ''
+            html_body = md_lib.markdown(body, extensions=['extra', 'nl2br', 'tables'])
+            styled_html = f"""<style>
+body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;color:#e0e0e0}}
+h1{{color:#3b82f6;border-bottom:2px solid #3b82f6;padding-bottom:8px}}
+h2{{color:#60a5fa;margin-top:24px}}h3{{color:#93c5fd;margin-top:20px}}
+a{{color:#60a5fa;text-decoration:none}}a:hover{{text-decoration:underline}}
+table{{border-collapse:collapse;width:100%;margin:16px 0;background-color:#1a1a1a;border-radius:8px;overflow:hidden}}
+th{{background-color:#2563eb;color:white;font-weight:600;padding:12px 16px;text-align:left;border-bottom:2px solid #3b82f6}}
+td{{padding:10px 16px;border-bottom:1px solid #333}}
+tr:hover{{background-color:#262626}}tr:last-child td{{border-bottom:none}}
+code{{background-color:#2a2a2a;padding:2px 6px;border-radius:4px;font-family:'Consolas','Monaco',monospace;color:#22c55e}}
+pre{{background-color:#1a1a1a;padding:16px;border-radius:8px;overflow-x:auto;border-left:4px solid #3b82f6}}
+blockquote{{border-left:4px solid #3b82f6;padding-left:16px;margin:16px 0;color:#9ca3af}}
+ul,ol{{padding-left:24px}}li{{margin:4px 0}}
+</style><h1>{title}</h1>{html_body}"""
+            self.course_detail_window.detailView.setHtml(styled_html)
+        else:
+            self.course_detail_window.detailView.setHtml(html)
 
-        if todo:
-            # Reuse the existing format method
-            detail_view.setHtml(self._format_todo_details(todo))
+    def _fetch_tab_content(self, tab_name, url):
+        def fetch_worker():
+            try:
+                session = self._create_session()
+                print(f"[INFO] Fetching {tab_name} from {url}")
+                response = session.get(url, timeout=10)
+                response.raise_for_status()
+
+                # Handle redirects
+                if response.history:
+                    print(f"[INFO] Server redirects detected for {tab_name}")
+                if "window.location.href" in response.text:
+                    js_redirect = re.search(r"window\.location\.href\s*=\s*['\"]([^'\"]+)['\"]", response.text)
+                    if js_redirect:
+                        redirect_url = js_redirect.group(1)
+                        if redirect_url.startswith('/'): redirect_url = f"https://psu.instructure.com{redirect_url}"
+                        print(f"[INFO] Following JS redirect to: {redirect_url}")
+                        response = session.get(redirect_url, timeout=10)
+                        response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                markdown = self._parse_special_page(tab_name, response.text, soup) if ('grades' in url.lower() or 'Grades' in tab_name or self._is_modules_page(response.text, soup)) else self._html_to_md(soup)
+
+                if markdown:
+                    safe_tab_name = "".join(c if c.isalnum() or c in (' ', '_') else '_' for c in tab_name)
+                    tabs_dir = os.path.join(self.course_detail_mgr.course_dir, 'Tabs')
+                    os.makedirs(tabs_dir, exist_ok=True)
+                    save_path = os.path.join(tabs_dir, f"{safe_tab_name}.md")
+                    full_markdown = f"# {tab_name}\n\nSource: {url}\n\n---\n\n{markdown}"
+                    with open(save_path, 'w', encoding='utf-8') as f:
+                        f.write(full_markdown)
+                    self.tab_content_signal.update_html.emit(f"MARKDOWN:{full_markdown}")
+                    print(f"[INFO] Saved {tab_name} to {save_path}")
+                else:
+                    self.tab_content_signal.update_html.emit(f"<h2 style='color: #ef4444;'>Error</h2><p>No content found for {tab_name}</p>")
+            except Exception as e:
+                self.tab_content_signal.update_html.emit(f"<h2 style='color: #ef4444;'>Error</h2><p>Failed to fetch {tab_name}: {str(e)}</p>")
+                print(f"[ERROR] Failed to fetch {tab_name}: {e}")
+        threading.Thread(target=fetch_worker, daemon=True).start()
+
+    def _create_session(self):
+        with open(config.COOKIES_FILE) as f:
+            cookies = {c['name']: c['value'] for c in json.load(f)}
+        s = requests.Session()
+        s.cookies.update(cookies)
+        s.headers['User-Agent'] = 'Mozilla/5.0'
+        return s
+
+    def _html_to_md(self, soup):
+        content = soup.find('div', id='content') or soup.body
+        if not content: return None
+        h = html2text.HTML2Text()
+        h.ignore_links = h.ignore_images = False
+        h.body_width = 0
+        return h.handle(str(content))
+
+    def _is_modules_page(self, html_text, soup):
+        # Must have ALL conditions to be considered modules page
+        has_modules_keyword = 'modules' in html_text.lower()
+        if not has_modules_keyword:
+            return False
+
+        # Check for specific modules indicators (not just keyword)
+        has_modules_dom = soup.find('div', id='context_modules') or soup.find('div', class_=lambda x: x and 'context_modules' in x)
+        has_modules_env = 'ENV.MODULES_PATH' in html_text or '"modules_path"' in html_text
+        has_modules_url = '/courses/' in html_text and '/modules' in html_text and 'context_modules' in html_text
+
+        # Return True only if has specific modules indicators
+        return bool(has_modules_dom or has_modules_env or has_modules_url)
+
+    def _parse_special_page(self, name, html_text, soup):
+        if 'grades' in name.lower():
+            return self._parse_grades_page(html_text, soup)
+        elif self._is_modules_page(html_text, soup):
+            return self._parse_modules_page(html_text, soup)
+        return None
+
+    def _parse_grades_page(self, html_text, soup):
+        try:
+            start = html_text.find('ENV = {')
+            if start == -1: return "**Error:** No ENV found"
+            bc, pos = 0, html_text.find('{', start)
+            for i, c in enumerate(html_text[pos:], pos):
+                if c == '{': bc += 1
+                elif c == '}':
+                    bc -= 1
+                    if bc == 0:
+                        env = json.loads(html_text[pos:i+1])
+                        break
+            else: return "**Error:** Incomplete ENV"
+
+            subs = env.get('submissions', [])
+            if not subs: return "**No grades**"
+            md = ["## Grades\n", "| Assignment | Score | Status |", "|------------|-------|--------|"]
+            for s in subs:
+                aid = s.get('assignment_id', '')
+                link = soup.find('a', href=re.compile(f'/assignments/{aid}'))
+                name = link.get_text(strip=True) if link else f"Assignment {aid}"
+                score = s.get('score')
+                if s.get('excused'): md.append(f"| {name} | Excused | Excused |")
+                elif score: md.append(f"| {name} | {score:.1f} | ✅ Graded |")
+                else: md.append(f"| {name} | - | ⏳ Not submitted |")
+            return '\n'.join(md)
+        except Exception as e:
+            return f"**Error:** {e}"
+
+    def _parse_modules_page(self, html_text, soup):
+        try:
+            cid = re.search(r'/courses/(\d+)/', html_text)
+            if not cid: return "**Error:** No course ID"
+            s = self._create_session()
+            s.headers['Accept'] = 'application/json+canvas-string-ids'
+            r = s.get(f'https://psu.instructure.com/api/v1/courses/{cid.group(1)}/modules', params={'include[]': ['items']}, timeout=10)
+            r.raise_for_status()
+
+            md = [f"## Modules ({len(r.json())} total)\n"]
+            for m in r.json():
+                state = {'completed':'✅','started':'🔄','locked':'🔒'}.get(m.get('state'),'📦')
+                md.append(f"\n### {state} {m.get('name','?')}")
+                items = m.get('items', [])
+                if items:
+                    md.append("| Item | Type | Local |")
+                    md.append("|------|------|-------|")
+                    for i in items:
+                        title, typ = i.get('title','?'), i.get('type','?')
+                        local = '🟢' if os.path.exists(os.path.join(config.ROOT_DIR, 'todo_files', title)) else '-'
+                        md.append(f"| {title} | {typ} | {local} |")
+            return '\n'.join(md)
+        except Exception as e:
+            return f"**Error:** {e}"
+
+    def _open_folder(self, path):
+        if path and os.path.exists(path):
+            {'Windows': lambda: os.startfile(path), 'Darwin': lambda: subprocess.run(['open', path]), 'Linux': lambda: subprocess.run(['xdg-open', path])}.get(platform.system(), lambda: None)()
 
     def close_tab(self, index):
-        """Close a tab (but keep first Main tab)"""
-        if index > 0:
-            self.main_window.consoleTabWidget.removeTab(index)
+        if index > 0: self.main_window.consoleTabWidget.removeTab(index)
 
+    def close_automation_tab(self, index):
+        if index > 0: self.automation_window.consoleTabWidget.removeTab(index)
+
+    def _install_list_event_filters(self):
+        for lst in [self.main_window.categoryList, self.main_window.itemList,
+                    self.automation_window.automatableOpenCategoryList, self.automation_window.automatableOpenItemList,
+                    self.automation_window.automatableCloseCategoryList, self.automation_window.automatableCloseItemList,
+                    self.automation_window.automatableCategoryList, self.automation_window.automatableItemList,
+                    self.automation_window.allItemsCategoryList, self.automation_window.allItemsItemList,
+                    self.course_detail_window.categoryList, self.course_detail_window.itemList]:
+            lst.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        # Handle main_window resize to update launcher overlay
+        if obj == self.main_window and event.type() == QEvent.Type.Resize:
+            self._update_launcher_geometry()
+            return False
+
+        if event.type() == QEvent.Type.KeyPress:
+            key = event.key()
+            modifiers = event.modifiers()
+            current_widget = self.stacked_widget.currentWidget()
+
+            # Launcher overlay WASD + Space navigation
+            if self.launcher_overlay.isVisible() and isinstance(obj, QListWidget):
+                if key in [Qt.Key.Key_W, Qt.Key.Key_A, Qt.Key.Key_S, Qt.Key.Key_D]:
+                    self._handle_launcher_wasd(key, obj)
+                    return True
+                elif key == Qt.Key.Key_Space:
+                    if obj == self.launcher_overlay.courseList:
+                        item = obj.currentItem()
+                        if item:
+                            self._on_launcher_course_double_clicked(item)
+                            return True
+                return False
+
+            # WASD Navigation
+            if key in [Qt.Key.Key_W, Qt.Key.Key_A, Qt.Key.Key_S, Qt.Key.Key_D] and isinstance(obj, QListWidget):
+                self._handle_wasd_navigation(key, current_widget)
+                return True
+
+            # Space: Open CourseDetail/Tab URL
+            if key == Qt.Key.Key_Space:
+                if current_widget == self.main_window and self.main_window.categoryList.currentRow() == 0:
+                    ii = self.main_window.itemList.currentRow()
+                    if ii >= 0:
+                        courses = self.dm.get('courses')
+                        if ii < len(courses):
+                            self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+                            self.populate_course_detail_window()
+                            self.stacked_widget.setCurrentWidget(self.course_detail_window)
+                            return True
+                elif current_widget == self.course_detail_window:
+                    ii = self.course_detail_window.itemList.currentRow()
+                    if ii >= 0:
+                        item_data = self.course_detail_window.itemList.item(ii).data(Qt.ItemDataRole.UserRole + 1)
+                        if item_data and item_data.get('type') == 'tab':
+                            url = item_data.get('data', {}).get('url')
+                            if url:
+                                webbrowser.open(url)
+                                return True
+
+            # F: Open folder
+            if key == Qt.Key.Key_F and current_widget == self.course_detail_window and self.course_detail_mgr:
+                category = self.course_detail_window.categoryList.currentItem()
+                if category:
+                    folder_map = {'Syllabus': self.course_detail_mgr.syll_dir, 'Textbook': self.course_detail_mgr.textbook_dir, 'Tabs': os.path.join(self.course_detail_mgr.course_dir, 'Tabs')}
+                    folder = folder_map.get(category.text())
+                    if folder:
+                        os.makedirs(folder, exist_ok=True)
+                        self._open_folder(folder)
+                        return True
+
+            # Shift+Space: Jump to autoDetail (main window + automation window)
+            if key == Qt.Key.Key_Space and (modifiers & Qt.KeyboardModifier.ShiftModifier):
+                todo = None
+                if current_widget == self.main_window and self.main_window.categoryList.currentRow() == 1:
+                    ii = self.main_window.itemList.currentRow()
+                    if ii >= 0:
+                        item = self.main_window.itemList.item(ii)
+                        if item:
+                            todo = item.data(Qt.ItemDataRole.UserRole + 1)
+                elif current_widget == self.automation_window:
+                    tab_idx = self.automation_window.mainTabWidget.currentIndex()
+                    item_lists = [self.automation_window.automatableOpenItemList, self.automation_window.automatableCloseItemList,
+                                  self.automation_window.automatableItemList, self.automation_window.allItemsItemList]
+                    ii = item_lists[tab_idx].currentRow()
+                    if ii >= 0:
+                        item = item_lists[tab_idx].item(ii)
+                        if item:
+                            todo = item.data(Qt.ItemDataRole.UserRole)
+
+                if todo:
+                    meta = self.dm.classify_todo(todo)
+                    if meta.get('is_automatable'):
+                        self.auto_detail_mgr = AutoDetailManager(todo)
+                        self.populate_auto_detail_window()
+                        self.stacked_widget.setCurrentWidget(self.auto_detail_window)
+                        return True
+
+            # Main window shortcuts
+            if current_widget == self.main_window and not (modifiers & ~Qt.KeyboardModifier.ShiftModifier):
+                if key == Qt.Key.Key_A and (modifiers & Qt.KeyboardModifier.ShiftModifier):
+                    self.on_automation_top_clicked()
+                    return True
+                elif key == Qt.Key.Key_C and (modifiers & Qt.KeyboardModifier.ShiftModifier):
+                    self._show_clean_dialog()
+                    return True
+                elif key == Qt.Key.Key_C and not (modifiers & Qt.KeyboardModifier.ShiftModifier):
+                    self.main_window.categoryList.setCurrentRow(0)
+                    self.main_window.categoryList.setFocus()
+                    if self.main_window.itemList.count() > 0: self.main_window.itemList.setCurrentRow(0)
+                    return True
+                elif key == Qt.Key.Key_T:
+                    self.main_window.categoryList.setCurrentRow(1)
+                    self.main_window.categoryList.setFocus()
+                    if self.main_window.itemList.count() > 0: self.main_window.itemList.setCurrentRow(0)
+                    return True
+                elif key == Qt.Key.Key_F:
+                    self.main_window.categoryList.setCurrentRow(2)
+                    self.main_window.categoryList.setFocus()
+                    if self.main_window.itemList.count() > 0: self.main_window.itemList.setCurrentRow(0)
+                    return True
+        return super().eventFilter(obj, event)
+
+    def _handle_launcher_wasd(self, key, obj):
+        """Handle WASD navigation for launcher overlay"""
+        lists = [self.launcher_overlay.todoList, self.launcher_overlay.courseList]
+        current_idx = 0 if obj == lists[0] else 1 if obj == lists[1] else -1
+        if current_idx == -1: return
+
+        if key == Qt.Key.Key_W:
+            row = obj.currentRow()
+            if row > 0: obj.setCurrentRow(row - 1)
+        elif key == Qt.Key.Key_S:
+            row = obj.currentRow()
+            if row < obj.count() - 1: obj.setCurrentRow(row + 1)
+        elif key == Qt.Key.Key_A:
+            if current_idx > 0:
+                lists[current_idx - 1].setFocus()
+                if lists[current_idx - 1].count() > 0:
+                    lists[current_idx - 1].setCurrentRow(0)
+        elif key == Qt.Key.Key_D:
+            if current_idx < len(lists) - 1:
+                lists[current_idx + 1].setFocus()
+                if lists[current_idx + 1].count() > 0:
+                    lists[current_idx + 1].setCurrentRow(0)
+
+    def _handle_wasd_navigation(self, key, current_widget):
+        if current_widget == self.main_window:
+            lists = [self.main_window.categoryList, self.main_window.itemList, None]
+        elif current_widget == self.automation_window:
+            tab_idx = self.automation_window.mainTabWidget.currentIndex()
+            lists_map = [
+                [self.automation_window.automatableOpenCategoryList, self.automation_window.automatableOpenItemList, None],
+                [self.automation_window.automatableCloseCategoryList, self.automation_window.automatableCloseItemList, None],
+                [self.automation_window.automatableCategoryList, self.automation_window.automatableItemList, None],
+                [self.automation_window.allItemsCategoryList, self.automation_window.allItemsItemList, None]
+            ]
+            lists = lists_map[tab_idx]
+        elif current_widget == self.course_detail_window:
+            lists = [self.course_detail_window.categoryList, self.course_detail_window.itemList, None]
+        else:
+            return
+
+        focused_list = None
+        for i, lst in enumerate(lists):
+            if lst and lst.hasFocus():
+                focused_list = (i, lst)
+                break
+
+        if not focused_list:
+            if lists[0]: lists[0].setFocus()
+            return
+
+        idx, current_list = focused_list
+
+        if key == Qt.Key.Key_W:
+            current_row = current_list.currentRow()
+            if current_row > 0: current_list.setCurrentRow(current_row - 1)
+        elif key == Qt.Key.Key_S:
+            current_row = current_list.currentRow()
+            if current_row < current_list.count() - 1: current_list.setCurrentRow(current_row + 1)
+        elif key == Qt.Key.Key_A:
+            if idx > 0 and lists[idx - 1]:
+                lists[idx - 1].setFocus()
+                if lists[idx - 1].count() > 0: lists[idx - 1].setCurrentRow(0)
+        elif key == Qt.Key.Key_D:
+            if idx < len(lists) - 1 and lists[idx + 1]:
+                lists[idx + 1].setFocus()
+                if lists[idx + 1].count() > 0: lists[idx + 1].setCurrentRow(0)
+
+    def _show_clean_dialog(self):
+        from clean import preview_deletion, clean_directory, build_tree, print_tree
+        to_delete = preview_deletion()
+        if not to_delete: return QMessageBox.information(self, "Clean", "No files to clean!")
+
+        tree_output = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = tree_output
+        print_tree(build_tree(to_delete))
+        sys.stdout = old_stdout
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Clean Confirmation")
+        dialog.setMinimumSize(600, 400)
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("The following files will be deleted:"))
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setPlainText(f"Found {len(to_delete)} files to clean:\n\n{tree_output.getvalue()}")
+        layout.addWidget(text_edit)
+
+        button_layout = QHBoxLayout()
+        yes_btn, cancel_btn = QPushButton("Yes"), QPushButton("Cancel")
+        yes_btn.clicked.connect(lambda: (clean_directory(to_delete), QMessageBox.information(self, "Clean", "Files cleaned successfully!"), dialog.accept()))
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(yes_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+        dialog.exec()
 
 def init_qt_window():
-    """Initialize Qt window with status update thread"""
     window = CanvasApp()
-
-    # Background status update thread
     def status_update_thread():
-        """Update status every 30 seconds"""
         while True:
             time.sleep(30)
             window.status_signal.update.emit()
-
-    thread = threading.Thread(target=status_update_thread, daemon=True)
-    thread.start()
-
+    def archive_thread():
+        while True:
+            time.sleep(300)  # 5 minutes
+            try:
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+                from history_manager import archive_past_todos
+                archive_past_todos()
+            except: pass
+    threading.Thread(target=status_update_thread, daemon=True).start()
+    threading.Thread(target=archive_thread, daemon=True).start()
     return window
 
-
 def main():
-    """Standalone entry point (for running gui/qt.py directly)"""
     app = QApplication(sys.argv)
     app.setStyleSheet(DARK_THEME)
-
     window = init_qt_window()
     window.show()
-
     sys.exit(app.exec())
-
 
 if __name__ == '__main__':
     main()

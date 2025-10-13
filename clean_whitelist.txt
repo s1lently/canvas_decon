@@ -5,7 +5,6 @@
 .git/
 .claude/
 todo_files/
-misc/
 gui/
 func/
 login/
@@ -14,6 +13,8 @@ login/
 account_info.json
 personal_info.json
 cookies.json
+todos.json
+his_todo.json
 .gitignore
 
 # 保留的文档
@@ -21,5 +22,9 @@ CLAUDE.md
 README.md
 COMPLETE_QUIZ_WORKFLOW.md
 requirements.txt
+Done.txt
+gui_struct.md
+BUGFIX_COURSEDETAIL.md
+account_config.json
 
 # 保留所有 .py 文件（通过扩展名规则）

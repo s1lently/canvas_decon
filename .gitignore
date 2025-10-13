@@ -15,6 +15,7 @@ env/
 # Personal information
 cookies.json
 account_info.json
+account_config.json
 personal_info.json
 
 # Course data

@@ -26,9 +26,8 @@ class DataManager:
             except: pass
 
     def _load_files(self):
-        tfd = os.path.join(config.ROOT_DIR, 'todo_files')
-        if os.path.exists(tfd):
-            self.data['files'] = [f for f in os.listdir(tfd) if os.path.isdir(os.path.join(tfd, f))]
+        if os.path.exists(config.TODO_DIR):
+            self.data['files'] = [f for f in os.listdir(config.TODO_DIR) if os.path.isdir(os.path.join(config.TODO_DIR, f))]
 
     def get(self, key):
         """Get data by key"""

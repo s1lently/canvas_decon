@@ -60,9 +60,10 @@ def format_todo(todo):
 
 def format_folder(foldername):
     """Format folder contents as HTML"""
-    fp = os.path.join(config.ROOT_DIR, 'todo_files', foldername)
+    fp = os.path.join(config.TODO_DIR, foldername)
     html = f"<h2 style='color: #22c55e;'>{foldername}</h2><div style='font-family: monospace; font-size: 13px;'><p><strong>Path:</strong> {fp}</p>"
     if os.path.exists(fp):
-        files = [f for f in os.listdir(fp) if os.path.isfile(os.path.join(fp, f))]
-        html += (f"<p><strong>Files ({len(files)}):</strong></p><ul>{''.join(f'<li>{f} <span style=\"color: #aaa;\">({os.path.getsize(os.path.join(fp, f)):,} bytes)</span></li>' for f in sorted(files))}</ul>" if files else "<p><em>No files in folder</em></p>")
+        files_dir = os.path.join(fp, 'files')
+        files = [f for f in os.listdir(files_dir) if os.path.isfile(os.path.join(files_dir, f))] if os.path.exists(files_dir) else []
+        html += (f"<p><strong>Files ({len(files)}):</strong></p><ul>{''.join(f'<li>{f} <span style=\"color: #aaa;\">({os.path.getsize(os.path.join(files_dir, f)):,} bytes)</span></li>' for f in sorted(files))}</ul>" if files else "<p><em>No files in folder</em></p>")
     return html + "</div>"

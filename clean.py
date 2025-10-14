@@ -8,7 +8,7 @@ def load_whitelist():
     wl = ROOT_DIR / 'clean_whitelist.txt'
     if not wl.exists():
         return {'account_info.json', 'personal_info.json', 'CLAUDE.md', 'README.md',
-                'requirements.txt', 'cookies.json', '.gitignore'}, {'.git', '.claude', 'todo_files', 'misc'}
+                'requirements.txt', 'cookies.json', '.gitignore'}, {'.git', '.claude', 'todo', 'misc'}
     files, dirs = set(), set()
     for line in wl.read_text(encoding='utf-8').splitlines():
         line = line.strip()

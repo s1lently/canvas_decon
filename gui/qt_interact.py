@@ -28,8 +28,11 @@ def _run_in_thread(func, console, name, on_success=None):
             console.append(traceback.format_exc())
     threading.Thread(target=wrapper, daemon=True).start()
 
-def on_login_clicked(main_window, stacked_widget, login_window):
+def on_login_clicked(main_window, stacked_widget, login_window, app_instance=None):
     stacked_widget.setCurrentWidget(login_window)
+    # Reload API settings when opening settings window
+    if app_instance and hasattr(app_instance, '_load_api_settings'):
+        app_instance._load_api_settings()
 
 
 def on_get_cookie_clicked(tw, mw=None):

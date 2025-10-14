@@ -4,27 +4,28 @@
 # 保留的文件夹
 .git/
 .claude/
-todo_files/
+todo/
 gui/
 func/
 login/
+misc/
+Courses/
 
 # 保留的配置文件
 account_info.json
+account_config.json
 personal_info.json
 cookies.json
 todos.json
 his_todo.json
+course.json
 .gitignore
 
 # 保留的文档
 CLAUDE.md
 README.md
-COMPLETE_QUIZ_WORKFLOW.md
 requirements.txt
 Done.txt
-gui_struct.md
-BUGFIX_COURSEDETAIL.md
-account_config.json
+clean_whitelist.txt
 
 # 保留所有 .py 文件（通过扩展名规则）

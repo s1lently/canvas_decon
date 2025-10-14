@@ -27,7 +27,7 @@ his_todo.json
 *.html
 post_exp.txt
 todos.json
-todo_files/
+todo/
 Done.txt
 
 # Quiz/Homework output
@@ -37,9 +37,6 @@ homework_submissions/
 !README.md
 !CLAUDE.md
 *.docx
-
-# PDF files
-bisc_pdfs/
 
 # Logs
 *.log

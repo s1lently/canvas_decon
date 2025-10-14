@@ -517,16 +517,6 @@
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="QPushButton" name="automationBtn">
-          <property name="text">
-           <string>Auto</string>
-          </property>
-          <property name="minimumHeight">
-           <number>32</number>
-          </property>
-         </widget>
-        </item>
        </layout>
       </item>
       <item>

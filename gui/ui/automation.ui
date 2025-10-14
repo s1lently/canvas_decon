@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AutomationWindow</class>
+ <widget class="QMainWindow" name="AutomationWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Automation Page</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainVerticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="topBarLayout">
+      <item>
+       <widget class="QPushButton" name="backBtn">
+        <property name="text">
+         <string>← Back</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>font-size: 14px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="leftSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="beginAutomationBtn">
+        <property name="text">
+         <string>Begin Automation</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>140</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>140</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="styleSheet">
+         <string>font-size: 14px; font-weight: bold;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="rightSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="getTodoBtn">
+        <property name="text">
+         <string>gTODO</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="cleanBtn">
+        <property name="text">
+         <string>Clean</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>90</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="mainTabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="automatableOpenTab">
+       <attribute name="title">
+        <string>Auto Open</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="automatableOpenTabLayout">
+        <item>
+         <layout class="QHBoxLayout" name="automatableOpenContentLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="automatableOpenCategoryLayout">
+            <item>
+             <widget class="QListWidget" name="automatableOpenCategoryList">
+              <property name="minimumWidth">
+               <number>120</number>
+              </property>
+              <property name="maximumWidth">
+               <number>120</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="automatableOpenItemList">
+            <property name="minimumWidth">
+             <number>250</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextBrowser" name="automatableOpenDetailView">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Select an item to view details...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="automatableCloseTab">
+       <attribute name="title">
+        <string>Auto Close</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="automatableCloseTabLayout">
+        <item>
+         <layout class="QHBoxLayout" name="automatableCloseContentLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="automatableCloseCategoryLayout">
+            <item>
+             <widget class="QListWidget" name="automatableCloseCategoryList">
+              <property name="minimumWidth">
+               <number>120</number>
+              </property>
+              <property name="maximumWidth">
+               <number>120</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="automatableCloseItemList">
+            <property name="minimumWidth">
+             <number>250</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextBrowser" name="automatableCloseDetailView">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Select an item to view details...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="automatableTab">
+       <attribute name="title">
+        <string>All Automatable</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="automatableTabLayout">
+        <item>
+         <layout class="QHBoxLayout" name="automatableContentLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="automatableCategoryLayout">
+            <item>
+             <widget class="QListWidget" name="automatableCategoryList">
+              <property name="minimumWidth">
+               <number>120</number>
+              </property>
+              <property name="maximumWidth">
+               <number>120</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="automatableItemList">
+            <property name="minimumWidth">
+             <number>250</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextBrowser" name="automatableDetailView">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Select an item to view details...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="allItemsTab">
+       <attribute name="title">
+        <string>All Items</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="allItemsTabLayout">
+        <item>
+         <layout class="QHBoxLayout" name="allItemsContentLayout">
+          <property name="spacing">
+           <number>8</number>
+          </property>
+          <item>
+           <layout class="QVBoxLayout" name="allItemsCategoryLayout">
+            <item>
+             <widget class="QListWidget" name="allItemsCategoryList">
+              <property name="minimumWidth">
+               <number>120</number>
+              </property>
+              <property name="maximumWidth">
+               <number>120</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QListWidget" name="allItemsItemList">
+            <property name="minimumWidth">
+             <number>250</number>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTextBrowser" name="allItemsDetailView">
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+            <property name="placeholderText">
+             <string>Select an item to view details...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="consoleTabWidget">
+      <property name="minimumHeight">
+       <number>200</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="defaultTab">
+       <attribute name="title">
+        <string>Main</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="defaultTabLayout">
+        <item>
+         <widget class="QTextEdit" name="consoleOutput">
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+          <property name="placeholderText">
+           <string>Command output will appear here...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

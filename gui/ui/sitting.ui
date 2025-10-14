@@ -1,0 +1,513 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>SittingWindow</class>
+ <widget class="QMainWindow" name="SittingWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1200</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Settings</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="backButtonLayout">
+      <item>
+       <widget class="QPushButton" name="backBtn">
+        <property name="text">
+         <string>← Back</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>40</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="loginTab">
+       <attribute name="title">
+        <string>Login</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="loginTabLayout">
+        <item>
+         <spacer name="loginTopSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="loginCenterLayout">
+          <item>
+           <spacer name="loginLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="loginFormLayout">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="currentLoginLabel">
+              <property name="text">
+               <string>Current Login Information</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 18px; font-weight: bold; color: #3b82f6;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="accountDisplayLabel">
+              <property name="text">
+               <string>Account: --</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 14px; color: #aaa;</string>
+              </property>
+              <property name="minimumHeight">
+               <number>30</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="accountInput">
+              <property name="placeholderText">
+               <string>Account</string>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>400</number>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="passwordInput">
+              <property name="placeholderText">
+               <string>Password</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>400</number>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="keyInput">
+              <property name="placeholderText">
+               <string>TOTP Key</string>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>400</number>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="submitBtn">
+              <property name="text">
+               <string>Submit</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>400</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="loginRightSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="loginBottomSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="apiTab">
+       <attribute name="title">
+        <string>Set API</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="apiTabLayout">
+        <item>
+         <spacer name="apiTopSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="apiCenterLayout">
+          <item>
+           <spacer name="apiLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="apiFormLayout">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="apiTitleLabel">
+              <property name="text">
+               <string>API Configuration</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 18px; font-weight: bold; color: #3b82f6;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="geminiApiLabel">
+              <property name="text">
+               <string>Google/Gemini API Key</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 14px; color: #aaa;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="geminiApiInput">
+              <property name="placeholderText">
+               <string>Enter Gemini API Key</string>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>500</number>
+              </property>
+              <property name="maximumWidth">
+               <number>500</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="claudeApiLabel">
+              <property name="text">
+               <string>Anthropic/Claude API Key</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 14px; color: #aaa;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="claudeApiInput">
+              <property name="placeholderText">
+               <string>Enter Claude API Key</string>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>500</number>
+              </property>
+              <property name="maximumWidth">
+               <number>500</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="saveApiBtn">
+              <property name="text">
+               <string>Save API Keys</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>500</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="maximumWidth">
+               <number>500</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="apiRightSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="apiBottomSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="preferenceTab">
+       <attribute name="title">
+        <string>Preference</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="preferenceTabLayout">
+        <item>
+         <spacer name="prefTopSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="prefCenterLayout">
+          <item>
+           <spacer name="prefLeftSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="prefFormLayout">
+            <property name="spacing">
+             <number>20</number>
+            </property>
+            <item>
+             <widget class="QLabel" name="prefTitleLabel">
+              <property name="text">
+               <string>School Configuration</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 18px; font-weight: bold; color: #3b82f6;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="baseUrlInput">
+              <property name="placeholderText">
+               <string>Canvas Base URL (e.g., https://psu.instructure.com)</string>
+              </property>
+              <property name="minimumHeight">
+               <number>45</number>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="minimumWidth">
+               <number>500</number>
+              </property>
+              <property name="maximumWidth">
+               <number>500</number>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="savePrefBtn">
+              <property name="text">
+               <string>Save Preference</string>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>500</width>
+                <height>45</height>
+               </size>
+              </property>
+              <property name="maximumWidth">
+               <number>500</number>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <spacer name="prefRightSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="prefBottomSpacer">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

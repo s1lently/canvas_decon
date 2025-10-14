@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>CourseDetailWindow</class>
+ <widget class="QMainWindow" name="CourseDetailWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>800</height>
+   </rect>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="mainLayout">
+    <item>
+     <layout class="QHBoxLayout" name="topBar">
+      <item>
+       <widget class="QPushButton" name="backBtn">
+        <property name="text">
+         <string>← Back</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>80</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="toggleLayout">
+        <property name="spacing">
+         <number>10</number>
+        </property>
+       </layout>
+      </item>
+      <item>
+       <widget class="QLabel" name="courseNameLabel">
+        <property name="text">
+         <string>Course Name</string>
+        </property>
+        <property name="styleSheet">
+         <string>font-size: 16px; font-weight: bold;</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QPushButton" name="openSyllabusFolderBtn">
+        <property name="text">
+         <string>Open Syllabus Folder</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="openTextbookFolderBtn">
+        <property name="text">
+         <string>Open Textbook Folder</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="contentLayout">
+      <item>
+       <widget class="QListWidget" name="categoryList">
+        <property name="minimumWidth">
+         <number>180</number>
+        </property>
+        <property name="maximumWidth">
+         <number>180</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListWidget" name="itemList">
+        <property name="minimumWidth">
+         <number>250</number>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextBrowser" name="detailView">
+        <property name="openExternalLinks">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

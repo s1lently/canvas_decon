@@ -61,6 +61,19 @@
        </spacer>
       </item>
       <item>
+       <widget class="QPushButton" name="openSyllabusFolderBtn">
+        <property name="text">
+         <string>Open Syllabus Folder</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>160</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="openTextbookFolderBtn">
         <property name="text">
          <string>Open Textbook Folder</string>

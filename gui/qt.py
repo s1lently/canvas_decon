@@ -249,6 +249,7 @@ class CanvasApp(QMainWindow):
         aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(aw.consoleTabWidget, self))
         aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(aw.consoleTabWidget))
         cdw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
+        cdw.openSyllabusFolderBtn.clicked.connect(self.on_open_syllabus_folder_clicked)
         cdw.openTextbookFolderBtn.clicked.connect(self.on_open_textbook_folder_clicked)
         cdw.itemList.itemDoubleClicked.connect(self.on_course_detail_item_double_clicked)
         adw = self.auto_detail_window
@@ -618,6 +619,9 @@ class CanvasApp(QMainWindow):
             'placeholder': lambda: f"<p>No textbook files</p><p>Folder: {data['folder']}</p>"
         }
         cdw.detailView.setHtml(html_map.get(item_type, lambda: "<p>No details</p>")())
+    def on_open_syllabus_folder_clicked(self):
+        if not self.course_detail_mgr: return
+        self._open_folder(self.course_detail_mgr.get_syll_dir())
     def on_open_textbook_folder_clicked(self):
         if not self.course_detail_mgr: return
         self._open_folder(self.course_detail_mgr.get_textbook_dir())

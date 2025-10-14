@@ -15,15 +15,15 @@ def upload_files(files, product):
     raise ValueError(f"Unknown product: {product}")
 
 def _upload_gemini(files):
-    """Gemini 预上传"""
-    import google.generativeai as genai
-    genai.configure(api_key=config.GEMINI_API_KEY)
+    """Gemini 预上传 (使用新SDK)"""
+    from google import genai
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
 
     uploaded_info = []
     for f in files:
         if not os.path.exists(f):
             continue
-        uploaded = genai.upload_file(str(f))
+        uploaded = client.files.upload(path=str(f))
         uploaded_info.append({
             'filename': os.path.basename(f),
             'uri': uploaded.name,
@@ -83,17 +83,22 @@ def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False
     raise ValueError(f"Unknown product: {product}")
 
 def _gemini(prompt, model, uploaded_info=None):
-    """Gemini API调用"""
-    import google.generativeai as genai
-    genai.configure(api_key=config.GEMINI_API_KEY)
-    m = genai.GenerativeModel(model)
+    """Gemini API调用 (使用新SDK)"""
+    from google import genai
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-    if not uploaded_info:
-        return m.generate_content([prompt]).text
+    # 构建 contents
+    contents = [prompt]
+    if uploaded_info:
+        # 添加上传的文件
+        contents.extend([info['uploaded_obj'] for info in uploaded_info])
 
-    # 使用预上传的文件对象
-    ups = [info['uploaded_obj'] for info in uploaded_info]
-    return m.generate_content([prompt] + ups).text
+    # 调用 API
+    response = client.models.generate_content(
+        model=model,
+        contents=contents
+    )
+    return response.text
 
 def _claude(prompt, model, uploaded_info=None, thinking=False):
     """Claude API调用"""

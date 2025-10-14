@@ -137,5 +137,7 @@ class CourseDetailManager:
             })
         return items
 
+    def get_syll_dir(self):
+        return self.syll_dir
     def get_textbook_dir(self):
         return self.textbook_dir

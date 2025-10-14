@@ -37,15 +37,26 @@ def fetch_gemini_models(api_key):
 
 def get_all_models():
     """Get models for all products"""
-    try:
-        from google import genai
-        gemini_key = config.GEMINI_API_KEY
-    except: gemini_key = None
-
-    claude_key = getattr(config, 'CLAUDE_API_KEY', None)
-
-    models = {
-        'Gemini': fetch_gemini_models(gemini_key) if gemini_key else [],
-        'Claude': fetch_claude_models(claude_key) if claude_key else []
+    # Default fallback models (always available)
+    default_models = {
+        'Gemini': ['gemini-2.5-pro', 'gemini-2.5-flash', 'gemini-1.5-pro'],
+        'Claude': ['claude-sonnet-4-5-20250929', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229']
     }
-    return models
+
+    try:
+        gemini_key = getattr(config, 'GEMINI_API_KEY', None)
+        claude_key = getattr(config, 'CLAUDE_API_KEY', None)
+
+        models = {
+            'Gemini': fetch_gemini_models(gemini_key) if gemini_key else default_models['Gemini'],
+            'Claude': fetch_claude_models(claude_key) if claude_key else default_models['Claude']
+        }
+
+        # Ensure at least default models are present
+        if not models['Gemini']: models['Gemini'] = default_models['Gemini']
+        if not models['Claude']: models['Claude'] = default_models['Claude']
+
+        return models
+    except Exception as e:
+        # Fallback to defaults if anything goes wrong
+        return default_models

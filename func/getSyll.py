@@ -6,7 +6,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import config
 
 logging.basicConfig(level=logging.INFO, format='%(message)s', handlers=[
-    logging.FileHandler('syllabus_extractor.log', 'w', encoding='utf-8'),
     logging.StreamHandler()
 ])
 logger = logging.getLogger(__name__)

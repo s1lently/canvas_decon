@@ -188,8 +188,8 @@ class CanvasApp(QMainWindow):
     # === SIGNAL SLOTS (Thread-safe UI updates) ===
     def _update_course_detail_html(self, html):
         """Update CourseDetail HTML view"""
-        if self.course_detail_window:
-            self.course_detail_window.detailView.setHtml(html)
+        if hasattr(self, 'course_detail_handler'):
+            self.course_detail_handler.update_html(html)
 
     def _update_auto_detail_status(self, status_text):
         """Update AutoDetail status label"""

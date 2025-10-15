@@ -62,8 +62,7 @@ class UIInitializer:
         ]):
             getattr(app.automation_window, layout).addWidget(toggle)
 
-        app.ios_toggle_course_detail = IOSToggle(width=50, height=24)
-        app.course_detail_window.toggleLayout.addWidget(app.ios_toggle_course_detail)
+        # Removed: ios_toggle_course_detail (console toggle moved to sidebar)
 
         # Enable drag-and-drop for course detail
         app.course_detail_window.itemList.setAcceptDrops(True)

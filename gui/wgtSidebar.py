@@ -4,6 +4,55 @@ from PyQt6.QtCore import Qt, pyqtSignal, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QFont
 
 
+class SidebarToggle(QWidget):
+    """Sidebar toggle item with label and IOSToggle widget"""
+
+    def __init__(self, icon, text, toggle_widget, parent=None):
+        super().__init__(parent)
+        self.icon = icon
+        self.text = text
+        self.toggle = toggle_widget
+        self.setFixedHeight(50)
+
+        # Make clickable (will toggle the IOSToggle)
+        self.setStyleSheet("background: transparent;")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        # Icon label
+        self.icon_label = QLabel(icon, self)
+        self.icon_label.setGeometry(15, 0, 40, 50)
+        self.icon_label.setFont(QFont('Arial', 20))
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setStyleSheet("color: #aaa;")
+
+        # Text label (hidden initially)
+        self.text_label = QLabel(text, self)
+        self.text_label.setFont(QFont('Arial', 11))
+        self.text_label.setStyleSheet("color: #fff; background: transparent;")
+        self.text_label.setVisible(False)
+
+        # Toggle widget (small size)
+        self.toggle.setParent(self)
+        self.toggle.setGeometry(155, 13, 35, 18)  # Smaller toggle at right edge when expanded
+        self.toggle.setVisible(False)
+
+    def resizeEvent(self, event):
+        """Update positions when widget resizes"""
+        super().resizeEvent(event)
+        self.text_label.setGeometry(70, 15, 75, 20)
+        self.toggle.setGeometry(155, 13, 35, 18)
+
+    def show_text(self, visible):
+        """Show/hide text and toggle (called by parent sidebar)"""
+        self.text_label.setVisible(visible)
+        self.toggle.setVisible(visible)
+
+    def mousePressEvent(self, event):
+        """Click anywhere to toggle"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle.setChecked(not self.toggle.isChecked())
+
+
 class SidebarButton(QWidget):
     """Sidebar button with hover expand animation"""
     clicked = pyqtSignal()
@@ -15,8 +64,9 @@ class SidebarButton(QWidget):
         self.setFixedHeight(50)
         self._text_visible = False
 
-        # Use absolute positioning for overlay effect
+        # Make entire widget clickable
         self.setStyleSheet("background: transparent;")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
 
         # Icon button (always visible)
         self.icon_btn = QPushButton(icon, self)
@@ -40,25 +90,34 @@ class SidebarButton(QWidget):
         """)
         self.icon_btn.clicked.connect(self.clicked.emit)
 
-        # Text label (initially hidden, positioned to the left of icon)
-        self.text_label = QLabel(text, self)
-        self.text_label.setFont(QFont('Arial', 11))
-        self.text_label.setStyleSheet("""
-            QLabel {
+        # Text button (initially hidden, clickable)
+        self.text_btn = QPushButton(text, self)
+        self.text_btn.setFont(QFont('Arial', 11))
+        self.text_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.text_btn.setStyleSheet("""
+            QPushButton {
                 color: #fff;
                 background-color: #2a2a2a;
-                padding: 6px 12px;
+                border: none;
                 border-radius: 8px;
+                text-align: left;
+                padding-left: 12px;
+            }
+            QPushButton:hover {
+                background-color: #3a3a3a;
+            }
+            QPushButton:pressed {
+                background-color: #4a4a4a;
             }
         """)
-        self.text_label.adjustSize()
-        self.text_label.setVisible(False)
+        self.text_btn.clicked.connect(self.clicked.emit)
+        self.text_btn.setVisible(False)
 
     def resizeEvent(self, event):
-        """Update text label position when widget resizes"""
+        """Update text button position when widget resizes"""
         super().resizeEvent(event)
-        # Position text label to the right of icon
-        self.text_label.setGeometry(
+        # Position text button to the right of icon
+        self.text_btn.setGeometry(
             70,  # x: right after icon (5 + 60 + 5)
             10,  # y: vertically centered
             120, # width
@@ -66,9 +125,9 @@ class SidebarButton(QWidget):
         )
 
     def show_text(self, visible):
-        """Show/hide text label (called by parent sidebar)"""
+        """Show/hide text button (called by parent sidebar)"""
         self._text_visible = visible
-        self.text_label.setVisible(visible)
+        self.text_btn.setVisible(visible)
 
 
 class GlobalSidebar(QWidget):
@@ -197,10 +256,15 @@ class GlobalSidebar(QWidget):
         super().leaveEvent(event)
 
     def update_tools(self, actions=None):
-        """Update tool buttons (extensible interface)
+        """Update tool buttons/toggles (extensible interface)
 
         Args:
-            actions: List of dicts with 'icon', 'text', 'callback'
+            actions: List of dicts with:
+                     - type: 'button' or 'toggle'
+                     - icon: emoji string
+                     - text: label text
+                     - callback: function (for buttons)
+                     - widget: IOSToggle widget (for toggles)
                      If None, use default fixed tools
 
         Future usage:
@@ -216,18 +280,40 @@ class GlobalSidebar(QWidget):
         if actions is None:
             actions = self._get_default_tools()
 
-        # Create buttons for each action
+        # Create buttons/toggles for each action
         for action in actions:
-            btn = SidebarButton(action['icon'], action['text'])
-            btn.clicked.connect(action['callback'])
-            self.tools_container.addWidget(btn)
-            self.tool_buttons.append(btn)
+            if action.get('type') == 'toggle':
+                # Create toggle item
+                item = SidebarToggle(action['icon'], action['text'], action['widget'])
+                self.tools_container.addWidget(item)
+                self.tool_buttons.append(item)
+            else:
+                # Create button item (default)
+                btn = SidebarButton(action['icon'], action['text'])
+                btn.clicked.connect(action['callback'])
+                self.tools_container.addWidget(btn)
+                self.tool_buttons.append(btn)
 
     def _get_default_tools(self):
         """Default tool actions (simple version, extensible for future)"""
         from gui import utilQtInteract as qt_interact
+        from gui.wgtIOSToggle import IOSToggle
+
+        # Create console toggle for sidebar
+        if not hasattr(self.app, 'sidebar_console_toggle'):
+            self.app.sidebar_console_toggle = IOSToggle(width=35, height=18)
+            # Connect to console toggle handler
+            self.app.sidebar_console_toggle.stateChanged.connect(
+                self.app.main_handler.on_toggle_console_clicked
+            )
 
         return [
+            {
+                'type': 'toggle',
+                'icon': '💬',
+                'text': 'Console',
+                'widget': self.app.sidebar_console_toggle
+            },
             {
                 'icon': '🍪',
                 'text': 'Get Cookie',

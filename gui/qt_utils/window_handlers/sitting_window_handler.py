@@ -2,7 +2,7 @@
 import sys, os, json
 from io import StringIO
 from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
 from gui.qt_utils.base_handler import BaseHandler
@@ -10,6 +10,14 @@ from gui.qt_utils.base_handler import BaseHandler
 
 class SittingWindowHandler(BaseHandler):
     """Handles Sitting Window operations"""
+
+    def __init__(self, app):
+        super().__init__(app)
+
+        # Setup auto-refresh timer for tasks table (every 300ms)
+        self.tasks_refresh_timer = QTimer()
+        self.tasks_refresh_timer.timeout.connect(self.refresh_tasks_table)
+        self.tasks_refresh_timer.start(300)  # 0.3 seconds
 
     def open(self):
         """Open sitting window"""

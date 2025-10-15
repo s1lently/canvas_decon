@@ -167,9 +167,14 @@ class MainWindowHandler(BaseHandler):
         visible = (state == Qt.CheckState.Checked.value)
         self.main_window.consoleTabWidget.setVisible(visible)
         self.automation_window.consoleTabWidget.setVisible(visible)
+        self.course_detail_window.consoleTabWidget.setVisible(visible)
 
-        # Sync all toggle states
-        for toggle in [self.app.ios_toggle_main, self.app.ios_toggle_course_detail] + self.app.ios_toggles_auto:
+        # Sync all toggle states (including sidebar toggle)
+        all_toggles = [self.app.ios_toggle_main] + self.app.ios_toggles_auto
+        if hasattr(self.app, 'sidebar_console_toggle'):
+            all_toggles.append(self.app.sidebar_console_toggle)
+
+        for toggle in all_toggles:
             toggle.blockSignals(True)
             toggle.setChecked(visible)
             toggle.blockSignals(False)

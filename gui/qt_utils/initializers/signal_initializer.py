@@ -102,8 +102,8 @@ class SignalInitializer:
         cdw.openSyllabusFolderBtn.clicked.connect(app.course_detail_handler.on_open_syllabus_folder_clicked)
         cdw.openTextbookFolderBtn.clicked.connect(app.course_detail_handler.on_open_textbook_folder_clicked)
         cdw.deconTextbookBtn.clicked.connect(app.course_detail_handler.on_decon_textbook_clicked)
-        cdw.loadFromDeconBtn.clicked.connect(lambda: qt_interact.on_load_from_decon_clicked(app))
-        cdw.learnMaterialBtn.clicked.connect(lambda: qt_interact.on_learn_material_clicked(app))
+        cdw.loadFromDeconBtn.clicked.connect(lambda: qt_interact.on_load_from_decon_clicked(app, cdw.consoleTabWidget))
+        cdw.learnMaterialBtn.clicked.connect(lambda: qt_interact.on_learn_material_clicked(app, cdw.consoleTabWidget))
         cdw.itemList.itemDoubleClicked.connect(app.course_detail_handler.on_item_double_clicked)
         cdw.categoryList.currentRowChanged.connect(app.course_detail_handler.on_category_changed)
         cdw.itemList.currentRowChanged.connect(app.course_detail_handler.on_item_changed)
@@ -113,10 +113,7 @@ class SignalInitializer:
         cdw.itemList.dragMoveEvent = app.course_detail_handler.drag_move
         cdw.itemList.dropEvent = app.course_detail_handler.drag_drop
 
-        # iOS toggle
-        app.ios_toggle_course_detail.stateChanged.connect(
-            lambda: app.course_detail_handler.on_category_changed(cdw.categoryList.currentRow())
-        )
+        # Removed: ios_toggle_course_detail signal (moved to sidebar)
 
         # === AUTO DETAIL WINDOW ===
         adw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
@@ -151,7 +148,7 @@ class SignalInitializer:
         app.launcher_overlay.todoList.itemDoubleClicked.connect(app.launcher_handler.on_todo_double_clicked)
 
         # === TOGGLE CONNECTIONS ===
-        for toggle in [app.ios_toggle_main, app.ios_toggle_course_detail] + app.ios_toggles_auto:
+        for toggle in [app.ios_toggle_main] + app.ios_toggles_auto:
             toggle.stateChanged.connect(app.main_handler.on_toggle_console_clicked)
 
         app.history_toggle.stateChanged.connect(app.main_handler.on_history_toggle_clicked)
@@ -159,14 +156,18 @@ class SignalInitializer:
         # === SIDEBAR NAVIGATION ===
         def navigate_to(page_id):
             """Handle sidebar navigation"""
-            navigation_map = {
-                'launch': lambda: app.launcher_handler.show(),
-                'main': lambda: app.stacked_widget.setCurrentWidget(mw),
-                'auto': lambda: app.automation_handler.open_top(),
-                'sitting': lambda: app.stacked_widget.setCurrentWidget(sw)
-            }
-            if page_id in navigation_map:
-                navigation_map[page_id]()
+            if page_id == 'launch':
+                # Launch is overlay on Main window - switch to Main first
+                app.stacked_widget.setCurrentWidget(mw)
+                app.launcher_handler.show()
+            elif page_id == 'main':
+                # Main = close launcher overlay and show pure Main window
+                app.stacked_widget.setCurrentWidget(mw)
+                app.launcher_handler.hide()
+            elif page_id == 'auto':
+                app.automation_handler.open_top()
+            elif page_id == 'sitting':
+                app.stacked_widget.setCurrentWidget(sw)
 
         app.sidebar.navigate.connect(navigate_to)
 
@@ -176,8 +177,8 @@ class SignalInitializer:
         app.sitting_handler.load_api_settings()
 
         # Hide consoles initially
-        for w in [mw.consoleTabWidget, aw.consoleTabWidget]:
+        for w in [mw.consoleTabWidget, aw.consoleTabWidget, cdw.consoleTabWidget]:
             w.setVisible(False)
 
-        for t in [app.ios_toggle_main, app.ios_toggle_course_detail] + app.ios_toggles_auto:
+        for t in [app.ios_toggle_main] + app.ios_toggles_auto:
             t.setChecked(False)

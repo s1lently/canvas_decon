@@ -487,7 +487,7 @@ IMPORTANT:
                         pass
 
         from gui import utilQtInteract as qt_interact
-        console, progress = qt_interact._create_console_tab(self.main_window.consoleTabWidget, f"Decon: {selected_file}", with_progress=True)
+        console, progress = qt_interact._create_console_tab(self.course_detail_window.consoleTabWidget, f"Decon: {selected_file}", with_progress=True)
 
         def run_with_progress(c):
             run_decon(c, progress)

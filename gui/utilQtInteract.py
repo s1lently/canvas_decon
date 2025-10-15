@@ -269,8 +269,13 @@ def update_user_info_labels(el, nl, il):
         lbl.setText(f"{key.capitalize()}: {info[key]}")
 
 
-def on_load_from_decon_clicked(canvas_app):
-    """Load decon chapter PDFs to Learn directory"""
+def on_load_from_decon_clicked(canvas_app, console_widget=None):
+    """Load decon chapter PDFs to Learn directory
+
+    Args:
+        canvas_app: CanvasApp instance
+        console_widget: Optional QTabWidget for console output (defaults to main_window console)
+    """
     if not canvas_app.course_detail_mgr:
         return
 
@@ -279,7 +284,9 @@ def on_load_from_decon_clicked(canvas_app):
     course_name = canvas_app.course_detail_mgr.get_course_name()
 
     # Create console in main thread
-    console = _create_console_tab(canvas_app.main_window.consoleTabWidget, "Load From Decon")
+    if console_widget is None:
+        console_widget = canvas_app.main_window.consoleTabWidget
+    console = _create_console_tab(console_widget, "Load From Decon")
 
     def run(console):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
@@ -304,8 +311,13 @@ def on_load_from_decon_clicked(canvas_app):
     _run_in_thread(run, console, "Load From Decon")
 
 
-def on_learn_material_clicked(canvas_app):
-    """Generate AI learning report for selected file"""
+def on_learn_material_clicked(canvas_app, console_widget=None):
+    """Generate AI learning report for selected file
+
+    Args:
+        canvas_app: CanvasApp instance
+        console_widget: Optional QTabWidget for console output (defaults to main_window console)
+    """
     if not canvas_app.course_detail_mgr:
         return
 
@@ -373,7 +385,9 @@ def on_learn_material_clicked(canvas_app):
     custom_prompt = prompt.strip() if prompt.strip() else None
 
     # Create console in main thread
-    console = _create_console_tab(canvas_app.main_window.consoleTabWidget, f"Learn: {filename}")
+    if console_widget is None:
+        console_widget = canvas_app.main_window.consoleTabWidget
+    console = _create_console_tab(console_widget, f"Learn: {filename}")
 
     def run(console):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))

@@ -505,7 +505,7 @@
       </widget>
       <widget class="QWidget" name="tasksTab">
        <attribute name="title">
-        <string>📊 Tasks</string>
+        <string>Tasks</string>
        </attribute>
        <layout class="QVBoxLayout" name="tasksTabLayout">
         <item>

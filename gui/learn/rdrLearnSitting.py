@@ -76,8 +76,9 @@ class LearnSittingWidget(QWidget):
         self.textbook_list.setDragEnabled(False)
         from PyQt6.QtWidgets import QAbstractItemView
         self.textbook_list.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
-        self.textbook_list.dragEnterEvent = self._drag_enter_textbook
-        self.textbook_list.dropEvent = self._drop_textbook
+        # Use lambda to properly bind event handlers
+        self.textbook_list.dragEnterEvent = lambda event: self._drag_enter_textbook(event)
+        self.textbook_list.dropEvent = lambda event: self._drop_textbook(event)
         textbook_layout.addWidget(self.textbook_list)
 
         # Buttons

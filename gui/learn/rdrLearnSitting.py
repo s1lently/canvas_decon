@@ -1,10 +1,11 @@
 """Learn Sitting Renderer - Creates 3-tab structure for Textbook in CourseDetail"""
 import os
 import sys
+import shutil
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTabWidget,
                               QListWidget, QPushButton, QLabel, QComboBox,
                               QTextEdit, QTextBrowser, QGroupBox, QFormLayout,
-                              QListWidgetItem, QMessageBox)
+                              QListWidgetItem, QMessageBox, QAbstractItemView)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
@@ -13,6 +14,38 @@ import config
 from gui.learn.cfgLearnPrefs import (load_preferences, save_preferences,
                                     get_available_products, get_available_models,
                                     get_resolved_product_model, set_product, set_model)
+
+
+class DropListWidget(QListWidget):
+    """QListWidget with drag-and-drop support for file uploads"""
+
+    def __init__(self, target_dir_callback, refresh_callback, parent=None):
+        super().__init__(parent)
+        self.target_dir_callback = target_dir_callback
+        self.refresh_callback = refresh_callback
+        self.setAcceptDrops(True)
+        self.setDragEnabled(False)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
+
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            target_dir = self.target_dir_callback()
+            for url in event.mimeData().urls():
+                file_path = url.toLocalFile()
+                if os.path.isfile(file_path):
+                    filename = os.path.basename(file_path)
+                    dest_path = os.path.join(target_dir, filename)
+                    try:
+                        shutil.copy2(file_path, dest_path)
+                        print(f"[DRAG-DROP] Copied: {filename} → {target_dir}")
+                    except Exception as e:
+                        print(f"[DRAG-DROP] Error copying {filename}: {e}")
+            event.acceptProposedAction()
+            self.refresh_callback()
 
 
 class LearnSittingWidget(QWidget):
@@ -70,16 +103,11 @@ class LearnSittingWidget(QWidget):
         textbook_group = QGroupBox("Textbook Files")
         textbook_layout = QVBoxLayout(textbook_group)
 
-        self.textbook_list = QListWidget()
+        self.textbook_list = DropListWidget(
+            target_dir_callback=lambda: self.course_detail_mgr.get_textbook_dir(),
+            refresh_callback=lambda: self.load_data()
+        )
         self.textbook_list.setMinimumHeight(250)
-        self.textbook_list.setAcceptDrops(True)
-        self.textbook_list.setDragEnabled(False)
-        from PyQt6.QtWidgets import QAbstractItemView
-        self.textbook_list.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
-        # Bind drag-drop handlers - capture self reference to avoid lambda scope issues
-        learn_widget = self
-        self.textbook_list.dragEnterEvent = lambda event: learn_widget._handle_drag_enter(event)
-        self.textbook_list.dropEvent = lambda event: learn_widget._handle_drop(event)
         textbook_layout.addWidget(self.textbook_list)
 
         # Buttons
@@ -762,28 +790,4 @@ class LearnSittingWidget(QWidget):
                                "Prompt test feature coming soon!\n\n"
                                "This will allow you to test your prompt with a sample file.")
 
-    # ========== DRAG AND DROP ==========
-    def _handle_drag_enter(self, event):
-        """Handle drag enter event for textbook list"""
-        if event.mimeData().hasUrls():
-            event.acceptProposedAction()
-
-    def _handle_drop(self, event):
-        """Handle drop event for textbook list"""
-        if event.mimeData().hasUrls():
-            import shutil
-            textbook_dir = self.course_detail_mgr.get_textbook_dir()
-
-            for url in event.mimeData().urls():
-                file_path = url.toLocalFile()
-                if os.path.isfile(file_path):
-                    filename = os.path.basename(file_path)
-                    dest_path = os.path.join(textbook_dir, filename)
-                    try:
-                        shutil.copy2(file_path, dest_path)
-                        print(f"[DRAG-DROP] Copied: {filename} → {textbook_dir}")
-                    except Exception as e:
-                        print(f"[DRAG-DROP] Error copying {filename}: {e}")
-
-            event.acceptProposedAction()
-            self.load_data()  # Refresh file list
+    # Drag-drop is now handled by DropListWidget class

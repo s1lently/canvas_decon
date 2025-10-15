@@ -214,6 +214,51 @@ class CanvasApp(QMainWindow):
                 'Linux': lambda: subprocess.run(['xdg-open', path])
             }.get(platform.system(), lambda: None)()
 
+    def _show_clean_dialog(self):
+        """Show clean dialog for deleting temporary files"""
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QTextEdit, QHBoxLayout, QPushButton, QMessageBox
+        from io import StringIO
+
+        try:
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from clean import preview_deletion, clean_directory, build_tree, print_tree
+        except ImportError:
+            QMessageBox.warning(self, "Error", "Clean module not found")
+            return
+
+        to_delete = preview_deletion()
+        if not to_delete:
+            return QMessageBox.information(self, "Clean", "No files to clean!")
+
+        tree_output = StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = tree_output
+        print_tree(build_tree(to_delete))
+        sys.stdout = old_stdout
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Clean Confirmation")
+        dialog.setMinimumSize(600, 400)
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("The following files will be deleted:"))
+        text_edit = QTextEdit()
+        text_edit.setReadOnly(True)
+        text_edit.setPlainText(f"Found {len(to_delete)} files to clean:\n\n{tree_output.getvalue()}")
+        layout.addWidget(text_edit)
+        button_layout = QHBoxLayout()
+        yes_btn, cancel_btn = QPushButton("Yes"), QPushButton("Cancel")
+        yes_btn.clicked.connect(lambda: (
+            clean_directory(to_delete),
+            QMessageBox.information(self, "Clean", "Files cleaned successfully!"),
+            dialog.accept()
+        ))
+        cancel_btn.clicked.connect(dialog.reject)
+        button_layout.addWidget(yes_btn)
+        button_layout.addWidget(cancel_btn)
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+        dialog.exec()
+
     # === EVENT HANDLING ===
     def eventFilter(self, obj, event):
         """Global event filter - delegates to KeyboardHandler"""

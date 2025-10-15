@@ -4,9 +4,9 @@ from PyQt6.QtWidgets import QStackedWidget, QLabel, QWidget, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.uic import loadUi
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from gui.wgtIOSToggle import IOSToggle
-from gui.wgtSidebar import GlobalSidebar
-from gui import rdrDelegates as delegates
+from gui.widgets.wgtIOSToggle import IOSToggle
+from gui.widgets.wgtSidebar import GlobalSidebar
+from gui.widgets import rdrDelegates as delegates
 
 
 class UIInitializer:

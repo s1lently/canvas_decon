@@ -5,7 +5,7 @@ from PyQt6.QtCore import QEvent, Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import config
 from gui.qt_utils.base_handler import BaseHandler
-from gui.mgrCourseDetail import CourseDetailManager
+from gui.details.mgrCourseDetail import CourseDetailManager
 
 
 class KeyboardHandler(BaseHandler):
@@ -92,7 +92,7 @@ class KeyboardHandler(BaseHandler):
                         if item:
                             todo = item.data(Qt.ItemDataRole.UserRole)
                 if todo:
-                    from gui.mgrAutoDetail import AutoDetailManager
+                    from gui.details.mgrAutoDetail import AutoDetailManager
                     meta = self.dm.classify_todo(todo)
                     if meta.get('is_automatable'):
                         self.app.auto_detail_mgr = AutoDetailManager(todo)

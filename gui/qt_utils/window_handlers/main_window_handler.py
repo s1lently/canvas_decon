@@ -5,10 +5,10 @@ from PyQt6.QtCore import Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
 from gui.qt_utils.base_handler import BaseHandler
-from gui import utilFormatters as formatters
-from gui import rdrDelegates as delegates
-from gui.mgrCourseDetail import CourseDetailManager
-from gui.mgrAutoDetail import AutoDetailManager
+from gui.learn import utilFormatters as formatters
+from gui.widgets import rdrDelegates as delegates
+from gui.details.mgrCourseDetail import CourseDetailManager
+from gui.details.mgrAutoDetail import AutoDetailManager
 
 
 class MainWindowHandler(BaseHandler):
@@ -232,7 +232,7 @@ class MainWindowHandler(BaseHandler):
 
     def stop_task_for_tab(self, tab_widget, index):
         """Stop any task associated with the given tab"""
-        from gui.mgrTask import get_task_manager
+        from gui.core.mgrTask import get_task_manager
         from PyQt6.QtWidgets import QTextEdit
 
         # Get the console widget from the tab

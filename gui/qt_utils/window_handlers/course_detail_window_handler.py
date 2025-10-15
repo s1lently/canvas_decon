@@ -7,10 +7,10 @@ import requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import config
 from gui.qt_utils.base_handler import BaseHandler
-from gui.mgrCourseDetail import CourseDetailManager
-from gui.rdrLearnSitting import LearnSittingWidget
-from gui import rdrDelegates as delegates
-from gui import utilFormatters as formatters
+from gui.details.mgrCourseDetail import CourseDetailManager
+from gui.learn.rdrLearnSitting import LearnSittingWidget
+from gui.widgets import rdrDelegates as delegates
+from gui.learn import utilFormatters as formatters
 
 
 class CourseDetailWindowHandler(BaseHandler):

@@ -7,7 +7,7 @@ import sys
 from PyQt6.QtWidgets import QApplication
 
 from gui.qt import CanvasApp
-from gui.cfgStyles import DARK_THEME
+from gui.config.cfgStyles import DARK_THEME
 
 
 def main():

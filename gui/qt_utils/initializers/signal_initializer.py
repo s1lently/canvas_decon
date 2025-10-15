@@ -1,7 +1,7 @@
 """Signal Initializer - Handles all signal/slot bindings"""
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
-from gui import utilQtInteract as qt_interact
+from gui.core import utilQtInteract as qt_interact
 
 
 class SignalInitializer:

@@ -296,8 +296,8 @@ class GlobalSidebar(QWidget):
 
     def _get_default_tools(self):
         """Default tool actions (simple version, extensible for future)"""
-        from gui import utilQtInteract as qt_interact
-        from gui.wgtIOSToggle import IOSToggle
+        from gui.core import utilQtInteract as qt_interact
+        from gui.widgets.wgtIOSToggle import IOSToggle
 
         # Create console toggle for sidebar
         if not hasattr(self.app, 'sidebar_console_toggle'):

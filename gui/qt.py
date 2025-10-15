@@ -10,10 +10,10 @@ from PyQt6.QtCore import pyqtSignal, QObject, QEvent
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config, checkStatus
-from gui import utilQtInteract
-from gui.mgrData import DataManager
-from gui.mgrDone import DoneManager
-from gui import rdrToast
+from gui.core import utilQtInteract
+from gui.core.mgrData import DataManager
+from gui.core.mgrDone import DoneManager
+from gui.widgets import rdrToast
 
 # Import all handlers
 from gui.qt_utils.window_handlers.launcher_handler import LauncherHandler

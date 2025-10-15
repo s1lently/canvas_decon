@@ -10,7 +10,7 @@ from PyQt6.QtGui import QFont
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
-from gui.cfgLearnPrefs import (load_preferences, save_preferences,
+from gui.learn.cfgLearnPrefs import (load_preferences, save_preferences,
                                     get_available_products, get_available_models,
                                     get_resolved_product_model, set_product, set_model)
 
@@ -355,12 +355,12 @@ class LearnSittingWidget(QWidget):
 
     def on_decon_textbook(self):
         """Decon textbook (call existing handler)"""
-        from gui import utilQtInteract as qt_interact
+        from gui.core import utilQtInteract as qt_interact
         qt_interact.on_decon_textbook_clicked(self.canvas_app)
 
     def on_load_from_decon(self):
         """Load from decon (call existing handler)"""
-        from gui import utilQtInteract as qt_interact
+        from gui.core import utilQtInteract as qt_interact
         qt_interact.on_load_from_decon_clicked(self.canvas_app)
         # Refresh lists after load
         self.refresh_learn_list()
@@ -412,7 +412,7 @@ class LearnSittingWidget(QWidget):
             return
 
         # Create single console
-        from gui.utilQtInteract import _create_console_tab
+        from gui.core.utilQtInteract import _create_console_tab
         console = _create_console_tab(self.canvas_app.main_window.consoleTabWidget, "Batch Learn")
 
         def run_batch():

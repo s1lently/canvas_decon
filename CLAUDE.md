@@ -695,33 +695,25 @@ for qdiv in question_divs:
 
 ## Quick Reference
 
-### File Locations
+### File Locations (Functional Domains)
 
 ```
-main.py                         # Entry point
-config.py                       # Paths + API keys + prompts
-checkStatus.py                  # 5 validators
-clean.py                        # Garbage collection
+# Core
+main.py, config.py, checkStatus.py, clean.py
+gui/qt.py                       # 227-line router
 
-gui/qt.py                       # Main app (227 lines, modular)
-gui/utilQtInteract.py           # Button handlers + threading
-gui/mgrData.py                  # JSON loading
-gui/mgrDone.py                  # Checkbox persistence
-gui/rdrDelegates.py             # Custom renderers
-gui/wgtIOSToggle.py             # Toggle widget
-gui/wgtSidebar.py               # Floating sidebar with animation
-gui/qt_utils/                   # Modular handlers + initializers
+# GUI (Modular by Domain)
+gui/core/                       # Base: mgrData, mgrDone, mgrTask, utilQtInteract
+gui/details/                    # Detail managers: mgrAutoDetail, mgrCourseDetail
+gui/learn/                      # Learn system: cfgLearnPrefs, rdrLearnSitting, utilFormatters
+gui/widgets/                    # UI: wgtSidebar, wgtIOSToggle, rdrDelegates, rdrToast, wgtProgress
+gui/config/                     # Config: cfgModel, cfgStyles
+gui/qt_utils/                   # Handlers: window_handlers/, event_handlers/, initializers/
 
-func/getTodos.py                # Fetch TODOs + download files
-func/getCourses.py              # Fetch courses + tabs
-func/getHomework.py             # Homework automation
-func/getQuiz_ultra.py           # Quiz automation
-func/utilPromptFiles.py         # Unified AI interface
-
-login/getCookie.py              # Selenium auto-login
-login/getTotp.py                # TOTP generation
-
-misc/jsons/                     # Runtime JSON data
+# Business Logic
+func/                           # getTodos, getCourses, getHomework, getQuiz_ultra, utilPromptFiles
+login/                          # getCookie, getTotp
+misc/jsons/                     # Runtime data: todos.json, cookies.json, course.json
 ```
 
 ### Key Constants (config.py)

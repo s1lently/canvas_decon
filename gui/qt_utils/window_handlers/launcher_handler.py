@@ -4,8 +4,8 @@ from PyQt6.QtWidgets import QListWidgetItem
 from PyQt6.QtCore import Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from gui.qt_utils.base_handler import BaseHandler
-from gui.mgrCourseDetail import CourseDetailManager
-from gui import rdrDelegates as delegates
+from gui.details.mgrCourseDetail import CourseDetailManager
+from gui.widgets import rdrDelegates as delegates
 
 
 class LauncherHandler(BaseHandler):

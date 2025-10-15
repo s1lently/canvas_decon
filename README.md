@@ -22,31 +22,21 @@ canvas_decon/
 ├── checkStatus.py          # 状态检查系统 (5个验证器)
 ├── clean.py                # 白名单垃圾清理
 │
-├── gui/                    # PyQt6 GUI系统 (模块化架构)
-│   ├── qt.py              # 主应用类 (CanvasApp, 227行, 87%减少)
-│   ├── utilQtInteract.py  # 按钮回调 + 线程管理
-│   ├── cfgStyles.py       # Dark Next.js主题
-│   ├── rdrDelegates.py    # 自定义渲染 (TodoItemDelegate, FileItemDelegate)
-│   ├── mgrData.py         # JSON数据加载
-│   ├── mgrDone.py         # 复选框状态持久化 (Done.txt)
-│   ├── mgrCourseDetail.py # 课程详情管理
-│   ├── mgrAutoDetail.py   # 自动化详情管理
-│   ├── utilFormatters.py  # HTML格式化器
-│   ├── wgtIOSToggle.py    # iOS风格开关组件
-│   ├── wgtSidebar.py      # 浮动侧边栏 (70px→200px动画)
-│   ├── cfgModel.py        # AI模型配置
-│   ├── qt_utils/          # 模块化处理器
+├── gui/                    # PyQt6 GUI系统 (功能域模块化)
+│   ├── qt.py              # 主应用入口 (227行, 87%减少)
+│   ├── core/              # 核心基础: mgrData, mgrDone, mgrTask, utilQtInteract
+│   ├── details/           # 详情管理器: mgrAutoDetail, mgrCourseDetail
+│   ├── learn/             # 学习系统: cfgLearnPrefs, rdrLearnSitting, utilFormatters
+│   ├── widgets/           # UI组件: wgtSidebar, wgtIOSToggle, rdrDelegates, rdrToast, wgtProgress
+│   ├── config/            # 配置: cfgModel (AI模型), cfgStyles (主题)
+│   ├── qt_utils/          # 窗口处理器
 │   │   ├── window_handlers/     # 7个窗口处理器
 │   │   ├── event_handlers/      # 键盘事件处理
 │   │   ├── content_processors/  # HTML/Tab加载/预览
 │   │   └── initializers/        # UI/Signal初始化器
 │   └── ui/                # Qt Designer UI文件 (6个窗口)
-│       ├── main.ui        # 主窗口
-│       ├── launcher.ui    # 启动器覆盖层
-│       ├── sitting.ui     # 设置窗口
-│       ├── automation.ui  # 自动化窗口
-│       ├── course_detail.ui    # 课程详情
-│       └── autoDetail.ui       # 自动化详情
+│       ├── main.ui, launcher.ui, sitting.ui
+│       ├── automation.ui, course_detail.ui, autoDetail.ui
 │
 ├── func/                   # 核心功能模块 (CLI + GUI兼容)
 │   ├── getTodos.py        # 获取TODO + 下载文件 → todo/

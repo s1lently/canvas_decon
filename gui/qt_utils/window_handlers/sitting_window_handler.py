@@ -138,7 +138,7 @@ class SittingWindowHandler(BaseHandler):
 
     def refresh_tasks_table(self):
         """Refresh tasks table with current running tasks"""
-        from gui.mgrTask import get_task_manager
+        from gui.core.mgrTask import get_task_manager
         from datetime import datetime
 
         table = self.sitting_window.tasksTable
@@ -165,7 +165,7 @@ class SittingWindowHandler(BaseHandler):
 
     def stop_selected_task(self):
         """Stop the selected task"""
-        from gui.mgrTask import get_task_manager
+        from gui.core.mgrTask import get_task_manager
 
         table = self.sitting_window.tasksTable
         current_row = table.currentRow()
@@ -193,7 +193,7 @@ class SittingWindowHandler(BaseHandler):
 
     def stop_all_tasks(self):
         """Stop all running tasks"""
-        from gui.mgrTask import get_task_manager
+        from gui.core.mgrTask import get_task_manager
 
         tasks = get_task_manager().get_all_tasks()
         if not tasks:

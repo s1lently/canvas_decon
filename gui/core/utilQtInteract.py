@@ -57,7 +57,7 @@ def _run_in_thread(func, console, name, on_success=None, task_id=None):
         on_success: Callback on success
         task_id: Unique task ID (defaults to thread name)
     """
-    from gui.mgrTask import get_task_manager
+    from gui.core.mgrTask import get_task_manager
 
     console.append(f"[INFO] {name} started")
 

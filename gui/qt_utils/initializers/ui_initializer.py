@@ -76,6 +76,8 @@ class UIInitializer:
         # Enable drag-and-drop for course detail
         app.course_detail_window.itemList.setAcceptDrops(True)
         app.course_detail_window.itemList.setDragEnabled(False)
+        from PyQt6.QtWidgets import QAbstractItemView
+        app.course_detail_window.itemList.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
 
         # History toggle
         app.history_toggle = IOSToggle(width=50, height=24)

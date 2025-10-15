@@ -32,7 +32,8 @@ class CourseDetailManager:
         self.course_dir = os.path.join(config.COURSES_DIR, f"{safe_name}_{self.course_id}")
         self.syll_dir = os.path.join(self.course_dir, 'Syll')
         self.textbook_dir = os.path.join(self.course_dir, 'Files', 'Textbook')
-        _ensure_dirs(self.course_dir, self.syll_dir, self.textbook_dir)
+        self.learn_dir = os.path.join(self.course_dir, 'Learn')
+        _ensure_dirs(self.course_dir, self.syll_dir, self.textbook_dir, self.learn_dir)
 
     def get_course_name(self):
         return self.course.get('name', 'Unknown')
@@ -249,7 +250,7 @@ class CourseDetailManager:
 
     def get_learn_dir(self):
         """Get Learn directory path"""
-        return os.path.join(self.course_dir, 'Learn')
+        return self.learn_dir
 
     def get_syll_dir(self):
         return self.syll_dir

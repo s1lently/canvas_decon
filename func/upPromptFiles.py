@@ -23,7 +23,7 @@ def _upload_gemini(files):
     for f in files:
         if not os.path.exists(f):
             continue
-        uploaded = client.files.upload(path=str(f))
+        uploaded = client.files.upload(file=str(f))
         uploaded_info.append({
             'filename': os.path.basename(f),
             'uri': uploaded.name,

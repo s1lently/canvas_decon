@@ -27,5 +27,6 @@ README.md
 requirements.txt
 Done.txt
 clean_whitelist.txt
+claude_full.md
 
 # 保留所有 .py 文件（通过扩展名规则）

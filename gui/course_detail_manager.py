@@ -21,9 +21,10 @@ def _ensure_dirs(*paths):
 class CourseDetailManager:
     """Manages CourseDetail window data + folder structure"""
 
-    def __init__(self, course_data, todos):
+    def __init__(self, course_data, todos, history_todos=None):
         self.course = course_data
         self.todos = todos
+        self.history_todos = history_todos or []
         self.course_id = str(course_data.get('id'))
 
         # Unified course folder structure: /Courses/CourseName_CourseID/
@@ -37,26 +38,38 @@ class CourseDetailManager:
         return self.course.get('name', 'Unknown')
 
     def get_categories(self):
-        cats = ['Introduction', 'Homework', 'Quiz']
+        cats = ['Learn', 'Introduction', 'Homework (Upcoming)', 'Homework (Past)', 'Quiz (Upcoming)', 'Quiz (Past)']
         # Check if Discussions tab exists (check for 'Discussions' or 'discussions' in tabs)
         tabs = self.course.get('tabs', {})
         if 'Discussions' in tabs or any('discussion' in k.lower() for k in tabs.keys()):
-            cats.append('Discussion')
+            cats.extend(['Discussion (Upcoming)', 'Discussion (Past)'])
         cats.extend(['Syllabus', 'Tabs', 'Textbook'])
         return cats
 
     def get_items_for_category(self, category):
-        if category == 'Introduction':
+        if category == 'Learn':
+            return self._get_learn()
+
+        elif category == 'Introduction':
             return [{'name': self.get_course_name(), 'type': 'intro', 'data': self.course}]
 
-        elif category == 'Homework':
-            return self._filter_by_url(lambda url: 'assignment' in url.lower() and 'quiz' not in url.lower())
+        elif category == 'Homework (Upcoming)':
+            return self._filter_by_url(lambda url: 'assignment' in url.lower() and 'quiz' not in url.lower(), use_history=False)
 
-        elif category == 'Quiz':
-            return self._filter_by_url(lambda url: 'quiz' in url.lower())
+        elif category == 'Homework (Past)':
+            return self._filter_by_url(lambda url: 'assignment' in url.lower() and 'quiz' not in url.lower(), use_history=True)
 
-        elif category == 'Discussion':
-            return self._filter_by_url(lambda url: 'discussion' in url.lower())
+        elif category == 'Quiz (Upcoming)':
+            return self._filter_by_url(lambda url: 'quiz' in url.lower(), use_history=False)
+
+        elif category == 'Quiz (Past)':
+            return self._filter_by_url(lambda url: 'quiz' in url.lower(), use_history=True)
+
+        elif category == 'Discussion (Upcoming)':
+            return self._filter_by_url(lambda url: 'discussion' in url.lower(), use_history=False)
+
+        elif category == 'Discussion (Past)':
+            return self._filter_by_url(lambda url: 'discussion' in url.lower(), use_history=True)
 
         elif category == 'Syllabus':
             return self._get_syllabus()
@@ -69,9 +82,10 @@ class CourseDetailManager:
 
         return []
 
-    def _filter_by_url(self, url_check):
+    def _filter_by_url(self, url_check, use_history=False):
         items = []
-        for todo in self.todos:
+        source = self.history_todos if use_history else self.todos
+        for todo in source:
             url = todo.get('redirect_url', '')
             match = re.search(r'/courses/(\d+)/', url)
             if not match or match.group(1) != self.course_id:
@@ -137,7 +151,59 @@ class CourseDetailManager:
             })
         return items
 
+    def _get_learn(self):
+        """Get files in Learn directory"""
+        learn_dir = os.path.join(self.course_dir, 'Learn')
+
+        if not os.path.exists(learn_dir):
+            os.makedirs(learn_dir, exist_ok=True)
+            os.makedirs(os.path.join(learn_dir, 'reports'), exist_ok=True)
+
+        # Get all files in Learn directory (excluding reports subdirectory)
+        files = []
+        if os.path.exists(learn_dir):
+            for item in os.listdir(learn_dir):
+                item_path = os.path.join(learn_dir, item)
+                if os.path.isfile(item_path):
+                    files.append(item)
+
+        if not files:
+            return [{'name': 'No learning materials - drag files here or Load From Decon', 'type': 'placeholder', 'data': {'folder': learn_dir}}]
+
+        items = []
+        reports_dir = os.path.join(learn_dir, 'reports')
+
+        # Natural sort (Chapter_1, Chapter_2, ..., Chapter_10)
+        import re
+        def natural_sort_key(s):
+            return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
+
+        for filename in sorted(files, key=natural_sort_key):
+            # Check if report exists
+            base_name = os.path.splitext(filename)[0]
+            report_path = os.path.join(reports_dir, f"{base_name}.md")
+            has_report = os.path.exists(report_path)
+
+            items.append({
+                'name': filename,
+                'type': 'learn_file',
+                'has_file': True,
+                'has_report': has_report,
+                'data': {
+                    'filename': filename,
+                    'path': os.path.join(learn_dir, filename),
+                    'folder': learn_dir,
+                    'report_path': report_path if has_report else None
+                }
+            })
+        return items
+
+    def get_learn_dir(self):
+        """Get Learn directory path"""
+        return os.path.join(self.course_dir, 'Learn')
+
     def get_syll_dir(self):
         return self.syll_dir
+
     def get_textbook_dir(self):
         return self.textbook_dir

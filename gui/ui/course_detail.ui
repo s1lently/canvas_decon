@@ -86,6 +86,45 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QPushButton" name="deconTextbookBtn">
+        <property name="text">
+         <string>Decon Textbook</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="loadFromDeconBtn">
+        <property name="text">
+         <string>Load Decon</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>140</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="learnMaterialBtn">
+        <property name="text">
+         <string>Learn</string>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>150</width>
+          <height>30</height>
+         </size>
+        </property>
+       </widget>
+      </item>
      </layout>
     </item>
     <item>

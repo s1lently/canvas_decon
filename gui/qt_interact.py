@@ -1,17 +1,51 @@
 """UI Interaction Logic for Canvas LMS Automation"""
 import os, sys, json, threading, requests
+from PyQt6.QtCore import Qt, QMetaObject, Q_ARG
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
 
-def _create_console_tab(tw, name):
-    """Create console tab"""
-    from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit
-    tab, layout, console = QWidget(), QVBoxLayout(), QTextEdit()
-    console.setReadOnly(True)
-    layout.addWidget(console)
-    tab.setLayout(layout)
-    tw.setCurrentIndex(tw.addTab(tab, name))
-    return console
+
+class ThreadSafeConsole:
+    """Thread-safe wrapper for QTextEdit console"""
+    def __init__(self, console_widget):
+        self.console = console_widget
+
+    def append(self, text):
+        """Thread-safe append to console"""
+        # Use Qt's invokeMethod to safely call from any thread
+        QMetaObject.invokeMethod(
+            self.console,
+            "append",
+            Qt.ConnectionType.QueuedConnection,
+            Q_ARG(str, str(text))
+        )
+
+def _create_console_tab(tw, name, with_progress=False):
+    """Create console tab with optional progress widget
+
+    Args:
+        tw: QTabWidget
+        name: Tab name
+        with_progress: If True, include progress bar widget
+
+    Returns:
+        ThreadSafeConsole wrapper if with_progress=False
+        tuple (ThreadSafeConsole, progress_widget) if with_progress=True
+    """
+    if with_progress:
+        from gui.progress_widget import create_console_with_progress
+        console_widget, progress_widget = create_console_with_progress(tw, name)
+        return ThreadSafeConsole(console_widget), progress_widget
+    else:
+        # Legacy: plain console tab
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit
+        tab, layout, console = QWidget(), QVBoxLayout(), QTextEdit()
+        console.setReadOnly(True)
+        console.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 11px;")
+        layout.addWidget(console)
+        tab.setLayout(layout)
+        tw.setCurrentIndex(tw.addTab(tab, name))
+        return ThreadSafeConsole(console)
 
 def _run_in_thread(func, console, name, on_success=None):
     """Execute in daemon thread"""
@@ -44,14 +78,30 @@ def on_get_cookie_clicked(tw, mw=None):
     _run_in_thread(run, _create_console_tab(tw, "Get Cookie"), "getCookie", lambda: mw.update_status() if mw else None)
 
 def on_get_todo_clicked(tw, mw=None):
-    """Execute getTodos"""
-    def run(c):
+    """Execute getTodos and getHistoryTodos in parallel"""
+    def run_todos(c):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
         from getTodos import main
+        c.append("[INFO] Fetching upcoming TODOs...")
         main()
+        c.append("[SUCCESS] Upcoming TODOs fetched")
+
+    def run_history(c):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+        from getHistoryTodos import main
+        c.append("[INFO] Fetching historical TODOs...")
+        main()
+        c.append("[SUCCESS] Historical TODOs fetched")
+
     def success():
-        if mw: mw.load_data(); mw.on_category_changed(mw.main_window.categoryList.currentRow())
-    _run_in_thread(run, _create_console_tab(tw, "Get TODO"), "getTodos", success)
+        if mw:
+            mw.load_data()
+            mw.on_category_changed(mw.main_window.categoryList.currentRow())
+            mw.show_toast("TODOs 获取完成！", 'success')
+
+    # Launch both threads
+    _run_in_thread(run_todos, _create_console_tab(tw, "Get TODO"), "getTodos", success)
+    _run_in_thread(run_history, _create_console_tab(tw, "Get History"), "getHistoryTodos")
 
 def on_get_course_clicked(tw, mw=None):
     """Execute getCourses"""
@@ -61,7 +111,10 @@ def on_get_course_clicked(tw, mw=None):
         main()
         c.append("✓ Courses saved")
     def success():
-        if mw: mw.load_data(); mw.update_status()
+        if mw:
+            mw.load_data()
+            mw.update_status()
+            mw.show_toast("Courses 获取完成！", 'success')
     _run_in_thread(run, _create_console_tab(tw, "Get Courses"), "getCourses", success)
 
 
@@ -173,3 +226,133 @@ def update_user_info_labels(el, nl, il):
     info = get_user_info()
     for lbl, key in [(el, 'email'), (nl, 'name'), (il, 'id')]:
         lbl.setText(f"{key.capitalize()}: {info[key]}")
+
+
+def on_load_from_decon_clicked(canvas_app):
+    """Load decon chapter PDFs to Learn directory"""
+    if not canvas_app.course_detail_mgr:
+        return
+
+    # Extract data in main thread
+    course_dir = canvas_app.course_detail_mgr.course_dir
+    course_name = canvas_app.course_detail_mgr.get_course_name()
+
+    # Create console in main thread
+    console = _create_console_tab(canvas_app.main_window.consoleTabWidget, "Load From Decon")
+
+    def run(console):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+        from learn_material import load_from_decon
+
+        console.append(f"{'='*80}")
+        console.append(f"📚 Load From Decon: {course_name}")
+        console.append(f"{'='*80}\n")
+
+        copied_files = load_from_decon(course_dir, console)
+
+        if copied_files:
+            console.append(f"\n✅ Successfully loaded {len(copied_files)} chapters to Learn")
+            # Trigger UI refresh
+            canvas_app.course_detail_signal.refresh_category.emit()
+            # Show toast
+            canvas_app.show_toast(f"已加载 {len(copied_files)} 个章节！", 'success')
+        else:
+            console.append("\n! No files loaded")
+
+    # Console already created above
+    _run_in_thread(run, console, "Load From Decon")
+
+
+def on_learn_material_clicked(canvas_app):
+    """Generate AI learning report for selected file"""
+    if not canvas_app.course_detail_mgr:
+        return
+
+    # Get selected item from Learn category
+    cdw = canvas_app.course_detail_window
+    current_item = cdw.itemList.currentItem()
+
+    if not current_item:
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(cdw, "No Selection", "Please select a file from the Learn category first.")
+        return
+
+    # Get item data (UserRole + 1 contains the full dict)
+    item_data = current_item.data(Qt.ItemDataRole.UserRole + 1)
+    if not item_data or item_data.get('type') != 'learn_file':
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.warning(cdw, "Invalid Selection", "Please select a valid learning material file.")
+        return
+
+    # Extract all data in main thread before starting worker
+    file_path = item_data['data']['path']
+    course_dir = canvas_app.course_detail_mgr.course_dir
+    course_name = canvas_app.course_detail_mgr.get_course_name()
+    filename = os.path.basename(file_path)
+
+    # Get default prompt for this file type and show dialog
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    from learn_material import get_default_prompt
+
+    default_prompt = get_default_prompt(file_path)
+
+    from PyQt6.QtWidgets import QInputDialog
+    prompt, ok = QInputDialog.getMultiLineText(
+        cdw,
+        "Edit Learning Prompt (编辑学习提示词)",
+        f"Customize AI prompt for: {filename}\n\nAvailable placeholders:\n"
+        "  {{filename}} - File name\n"
+        "  {{file_type}} - File type (for text files)\n"
+        "  {{content}} - File content (for text files)\n"
+        "  {{csv_preview}} - CSV preview (for CSV files)",
+        default_prompt
+    )
+
+    if not ok or not prompt.strip():
+        return  # User cancelled or empty prompt
+
+    # Create console in main thread
+    console = _create_console_tab(canvas_app.main_window.consoleTabWidget, f"Learn: {filename}")
+
+    def run(console):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+        from learn_material import learn_material
+
+        console.append(f"{'='*80}")
+        console.append(f"📚 Learn: {filename}")
+        console.append(f"Course: {course_name}")
+        console.append(f"{'='*80}\n")
+
+        report_path = learn_material(file_path, course_dir, console, custom_prompt=prompt.strip())
+
+        if report_path:
+            console.append(f"\n{'='*80}")
+            console.append(f"✅ Learning report generated successfully!")
+            console.append(f"📄 Report: {report_path}")
+            console.append(f"{'='*80}")
+
+            # Display report preview in console
+            console.append(f"\n📖 Report Preview:")
+            console.append("=" * 80)
+            try:
+                with open(report_path, 'r', encoding='utf-8') as f:
+                    report_content = f.read()
+                    # Show first 1000 chars
+                    preview = report_content[:1000]
+                    if len(report_content) > 1000:
+                        preview += "\n\n... (truncated, see full report at path above)"
+                    console.append(preview)
+            except Exception as e:
+                console.append(f"! Could not read report: {e}")
+            console.append("=" * 80)
+
+            # Trigger UI refresh to show report indicator
+            canvas_app.course_detail_signal.refresh_category.emit()
+            # Show toast
+            canvas_app.show_toast(f"Learn 报告生成完成！", 'success')
+        else:
+            console.append("\n✗ Failed to generate learning report")
+            canvas_app.show_toast("Learn 生成失败", 'error')
+
+    # Console already created above, just run thread
+    _run_in_thread(run, console, f"Learn: {filename}")

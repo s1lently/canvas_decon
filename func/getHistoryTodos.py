@@ -122,7 +122,7 @@ def get_history_todos(session):
     per_page = 100
 
     while True:
-        print(f"  Fetching page {page}...", end='', flush=True)
+        print(f"  Page {page}...", end='', flush=True)
         response = session.get(
             f"{config.CANVAS_BASE_URL}/api/v1/users/self/graded_submissions",
             params={'per_page': per_page}
@@ -131,20 +131,18 @@ def get_history_todos(session):
         graded = response.json()
 
         if not graded:
-            print(f" → empty, stopping")
+            print(f" done")
             break
 
-        print(f" → {len(graded)} items", flush=True)
+        print(f" {len(graded)} items", flush=True)
         all_graded.extend(graded)
 
         # Check for next page
         if 'next' not in response.links:
-            print(f"  No more pages, stopping at page {page}")
             break
 
         page += 1
         if page > 50:  # Safety limit
-            print(f"  Reached safety limit (50 pages)")
             break
 
     graded = all_graded
@@ -163,7 +161,7 @@ def get_history_todos(session):
     skipped_future = 0
     for i, sub in enumerate(graded, 1):
         if sub.get('graded_at'):  # Only graded items
-            print(f"  Processing {i}/{len(graded)}: assignment {sub.get('assignment_id')}", end='\r')
+            print(f"  {i}/{len(graded)}", end='\r')
             todo = convert_submission_to_todo_format(sub, session, courses_map)
             if todo:
                 # Filter: only include past-due assignments
@@ -179,23 +177,26 @@ def get_history_todos(session):
 
                 history_todos.append(todo)
 
-    print(f"\nConverted {len(history_todos)} submissions to TODO format (skipped {skipped_future} future assignments)")
+    print(f"\n✓ Converted {len(history_todos)} history TODOs (skipped {skipped_future} future)")
     return history_todos
 
 def save_history_todos(todos):
-    """Save to his_todo.json using history_manager (incremental insert only)"""
+    """Save to his_todo.json using history_manager (batch insert for efficiency, preserves existing data)"""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from history_manager import insert_or_update
+        from history_manager import batch_insert_or_update
 
-        for todo in todos:
-            insert_or_update(todo)
+        # Use batch insert with update_existing=False to preserve user data
+        stats = batch_insert_or_update(todos, update_existing=False)
 
-        print(f"Saved {len(todos)} historical TODOs to his_todo.json")
+        print(f"\n✓ Saved {stats['new']} new history TODOs (skipped {stats['skipped']} existing)")
     except Exception as e:
         print(f"Error saving: {e}")
-        # Fallback: save directly
+        import traceback
+        traceback.print_exc()
+        # Fallback: save directly (WARNING: overwrites entire file!)
         output_path = os.path.join(config.ROOT_DIR, 'his_todo.json')
+        print(f"[WARNING] Using fallback save - existing data will be lost!")
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(todos, f, indent=2, ensure_ascii=False)
         print(f"Fallback save to {output_path}")

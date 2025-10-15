@@ -6,12 +6,13 @@ import config
 class DataManager:
     """Centralized data management"""
     def __init__(self):
-        self.data = {'courses': [], 'todos': [], 'files': []}
+        self.data = {'courses': [], 'todos': [], 'history_todos': [], 'files': []}
 
     def load_all(self):
         """Load all data from files"""
         self._load_courses()
         self._load_todos()
+        self._load_history_todos()
         self._load_files()
 
     def _load_courses(self):
@@ -23,6 +24,12 @@ class DataManager:
         tf = os.path.join(config.ROOT_DIR, 'todos.json')
         if os.path.exists(tf):
             try: self.data['todos'] = json.load(open(tf))
+            except: pass
+
+    def _load_history_todos(self):
+        hf = os.path.join(config.ROOT_DIR, 'his_todo.json')
+        if os.path.exists(hf):
+            try: self.data['history_todos'] = json.load(open(hf))
             except: pass
 
     def _load_files(self):

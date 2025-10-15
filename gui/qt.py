@@ -6,7 +6,7 @@ from PyQt6.uic import loadUi
 from bs4 import BeautifulSoup
 import markdown as md_lib
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-import config, checkStatus; from gui import qt_interact, formatters, delegates, model_config
+import config, checkStatus; from gui import qt_interact, formatters, delegates, model_config, toast_notification
 from gui.data_manager import DataManager
 from gui.done_manager import DoneManager
 from gui.course_detail_manager import CourseDetailManager
@@ -20,6 +20,10 @@ class TabContentSignal(QObject):
 class AutoDetailSignal(QObject):
     status_update = pyqtSignal(str)
     preview_refresh = pyqtSignal()
+class CourseDetailSignal(QObject):
+    refresh_category = pyqtSignal()
+class ToastSignal(QObject):
+    show = pyqtSignal(str, str, int)  # message, msg_type, duration
 class CanvasApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -31,6 +35,10 @@ class CanvasApp(QMainWindow):
         self.auto_detail_signal = AutoDetailSignal()
         self.auto_detail_signal.status_update.connect(self._update_auto_detail_status)
         self.auto_detail_signal.preview_refresh.connect(self._refresh_auto_detail_preview)
+        self.course_detail_signal = CourseDetailSignal()
+        self.course_detail_signal.refresh_category.connect(self._refresh_current_category)
+        self.toast_signal = ToastSignal()
+        self.toast_signal.show.connect(self._show_toast_slot)
         self.init_qt()
         self.init_button_bindings()
         self.init_data_viewer()
@@ -60,6 +68,13 @@ class CanvasApp(QMainWindow):
             getattr(self.automation_window, layout).addWidget(toggle)
         self.ios_toggle_course_detail = IOSToggle(width=50, height=24)
         self.course_detail_window.toggleLayout.addWidget(self.ios_toggle_course_detail)
+        self.ios_toggle_course_detail.stateChanged.connect(lambda: self.on_course_detail_category_changed(self.course_detail_window.categoryList.currentRow()))
+        # Enable drag-and-drop for course detail itemList
+        self.course_detail_window.itemList.setAcceptDrops(True)
+        self.course_detail_window.itemList.setDragEnabled(False)
+        self.course_detail_window.itemList.dragEnterEvent = self._course_item_drag_enter
+        self.course_detail_window.itemList.dragMoveEvent = self._course_item_drag_move
+        self.course_detail_window.itemList.dropEvent = self._course_item_drop
         self.history_toggle = IOSToggle(width=50, height=24); hist_label = QLabel("History")
         hist_label.setStyleSheet("font-size: 11px; color: #aaa;")
         hist_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -204,7 +219,7 @@ class CanvasApp(QMainWindow):
         course_name = item.text(); courses = self.dm.get('courses')
         for i, course in enumerate(courses):
             if course.get('name') == course_name:
-                self.course_detail_mgr = CourseDetailManager(course, self.dm.get('todos'))
+                self.course_detail_mgr = CourseDetailManager(course, self.dm.get('todos'), self.dm.get('history_todos'))
                 self.populate_course_detail_window()
                 self._hide_launcher()
                 self.stacked_widget.setCurrentWidget(self.course_detail_window)
@@ -251,6 +266,9 @@ class CanvasApp(QMainWindow):
         cdw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
         cdw.openSyllabusFolderBtn.clicked.connect(self.on_open_syllabus_folder_clicked)
         cdw.openTextbookFolderBtn.clicked.connect(self.on_open_textbook_folder_clicked)
+        cdw.deconTextbookBtn.clicked.connect(self.on_decon_textbook_clicked)
+        cdw.loadFromDeconBtn.clicked.connect(lambda: qt_interact.on_load_from_decon_clicked(self))
+        cdw.learnMaterialBtn.clicked.connect(lambda: qt_interact.on_learn_material_clicked(self))
         cdw.itemList.itemDoubleClicked.connect(self.on_course_detail_item_double_clicked)
         adw = self.auto_detail_window
         adw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
@@ -301,9 +319,15 @@ class CanvasApp(QMainWindow):
             if status['courses'] == 0:
                 if console: console.append("[INFO] Fetching courses...")
                 qt_interact.on_get_course_clicked(self.main_window.consoleTabWidget, self)
-            if status['todos'] == 0:
-                if console: console.append("[INFO] Fetching todos...")
-                qt_interact.on_get_todo_clicked(self.main_window.consoleTabWidget, self)
+            # Always fetch TODOs on startup (both upcoming and historical)
+            if console: console.append("[INFO] Auto-fetching todos...")
+            qt_interact.on_get_todo_clicked(self.main_window.consoleTabWidget, self)
+    def show_toast(self, message, msg_type='success', duration=3000):
+        """显示Toast通知 (线程安全 - 从右上角滑入→停留→滑出)"""
+        self.toast_signal.show.emit(message, msg_type, duration)
+    def _show_toast_slot(self, message, msg_type, duration):
+        """Slot: 在主线程中创建Toast"""
+        toast_notification.show_toast(self, message, msg_type, duration)
     def update_status(self):
         qt_interact.update_status_indicators(self.status_widgets, checkStatus)
     def update_user_info(self):
@@ -396,7 +420,7 @@ class CanvasApp(QMainWindow):
             if ii >= 0:
                 courses = self.dm.get('courses')
                 if ii < len(courses):
-                    self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+                    self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'), self.dm.get('history_todos'))
                     self.populate_course_detail_window()
                     self.stacked_widget.setCurrentWidget(self.course_detail_window)
         elif ci == 1:
@@ -511,9 +535,58 @@ class CanvasApp(QMainWindow):
         if ii < 0: return QMessageBox.warning(self, "No Selection", "Please select a course first.")
         courses = self.dm.get('courses')
         if ii >= len(courses): return QMessageBox.warning(self, "Error", "Invalid course selection.")
-        self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+        self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'), self.dm.get('history_todos'))
         self.populate_course_detail_window()
         self.stacked_widget.setCurrentWidget(self.course_detail_window)
+    def _course_item_drag_enter(self, event):
+        """Handle drag enter event for course detail itemList"""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+    def _course_item_drag_move(self, event):
+        """Handle drag move event for course detail itemList"""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+    def _course_item_drop(self, event):
+        """Handle drop event for course detail itemList (for Textbook and Learn categories)"""
+        if not self.course_detail_mgr:
+            return
+
+        # Check if current category is Textbook or Learn
+        current_category = self.course_detail_window.categoryList.currentItem()
+        if not current_category:
+            return
+
+        category_text = current_category.text()
+
+        if category_text not in ['Textbook', 'Learn']:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self.course_detail_window, "Invalid Drop",
+                              "Files can only be dropped in the Textbook or Learn category.")
+            return
+
+        if event.mimeData().hasUrls():
+            import shutil
+
+            # Get target directory based on category
+            if category_text == 'Textbook':
+                target_dir = self.course_detail_mgr.get_textbook_dir()
+            else:  # Learn
+                target_dir = self.course_detail_mgr.get_learn_dir()
+
+            for url in event.mimeData().urls():
+                file_path = url.toLocalFile()
+                if os.path.isfile(file_path):
+                    filename = os.path.basename(file_path)
+                    dest_path = os.path.join(target_dir, filename)
+                    try:
+                        shutil.copy2(file_path, dest_path)
+                        print(f"[DRAG-DROP] Copied: {filename} → {target_dir}")
+                    except Exception as e:
+                        print(f"[DRAG-DROP] Error copying {filename}: {e}")
+
+            # Refresh the category view
+            event.acceptProposedAction()
+            self.on_course_detail_category_changed(self.course_detail_window.categoryList.currentRow())
     def populate_course_detail_window(self):
         if not self.course_detail_mgr: return
         cdw = self.course_detail_window
@@ -591,7 +664,11 @@ class CanvasApp(QMainWindow):
         cdw = self.course_detail_window
         cdw.itemList.clear()
         cdw.detailView.clear()
-        category = cdw.categoryList.item(index).text(); cdw.openTextbookFolderBtn.setVisible(category == 'Textbook')
+        category = cdw.categoryList.item(index).text()
+        cdw.openTextbookFolderBtn.setVisible(category == 'Textbook')
+        cdw.deconTextbookBtn.setVisible(category == 'Textbook')
+        cdw.loadFromDeconBtn.setVisible(category == 'Learn')
+        cdw.learnMaterialBtn.setVisible(category == 'Learn')
         items = self.course_detail_mgr.get_items_for_category(category)
         for item_data in items:
             item = QListWidgetItem(item_data['name'])
@@ -599,7 +676,7 @@ class CanvasApp(QMainWindow):
             item.setData(Qt.ItemDataRole.UserRole + 1, item_data)
             if item_data.get('is_done', False): item.setForeground(Qt.GlobalColor.gray)
             cdw.itemList.addItem(item)
-        cdw.itemList.setItemDelegate(delegates.FileItemDelegate(cdw.itemList) if category in ['Syllabus', 'Textbook'] else QStyledItemDelegate())
+        cdw.itemList.setItemDelegate(delegates.FileItemDelegate(cdw.itemList) if category in ['Syllabus', 'Textbook', 'Learn'] else QStyledItemDelegate())
         cdw.itemList.viewport().update()
     def on_course_detail_item_changed(self, index):
         if index < 0 or not self.course_detail_mgr: return
@@ -616,7 +693,10 @@ class CanvasApp(QMainWindow):
             'todo': lambda: formatters.format_todo(data),
             'syllabus': lambda: f"<h2 style='color: #22c55e;'>Syllabus</h2><p><a href='{data['url']}'>{data['url']}</a></p><p>Folder: {data['local_dir']}</p>",
             'textbook_file': lambda: f"<h2>{data['filename']}</h2><p>{data['path']}</p>",
-            'placeholder': lambda: f"<p>No textbook files</p><p>Folder: {data['folder']}</p>"
+            'learn_file': lambda: f"<h2 style='color: #3b82f6;'>📚 {data['filename']}</h2><p><strong>Path:</strong> {data['path']}</p>" +
+                                 (f"<p><strong>Report:</strong> <a href='file://{data['report_path']}'>{os.path.basename(data['report_path'])}</a> ✅</p>" if data.get('report_path') else
+                                  "<p><strong>Report:</strong> Not generated yet. Click 'Learn This Material' to generate.</p>"),
+            'placeholder': lambda: f"<p>No files</p><p>Folder: {data['folder']}</p>"
         }
         cdw.detailView.setHtml(html_map.get(item_type, lambda: "<p>No details</p>")())
     def on_open_syllabus_folder_clicked(self):
@@ -625,6 +705,380 @@ class CanvasApp(QMainWindow):
     def on_open_textbook_folder_clicked(self):
         if not self.course_detail_mgr: return
         self._open_folder(self.course_detail_mgr.get_textbook_dir())
+    def on_decon_textbook_clicked(self):
+        """Decon textbook PDFs using LLM - analyze chapters and split PDF"""
+        if not self.course_detail_mgr:
+            return QMessageBox.warning(self.course_detail_window, "Error", "No course selected.")
+
+        textbook_dir = self.course_detail_mgr.get_textbook_dir()
+        if not os.path.exists(textbook_dir):
+            return QMessageBox.warning(self.course_detail_window, "Error", "Textbook folder does not exist.")
+
+        # Get all PDF files
+        pdf_files = [f for f in os.listdir(textbook_dir) if f.lower().endswith('.pdf')]
+        if not pdf_files:
+            return QMessageBox.warning(self.course_detail_window, "Error", "No PDF files found in Textbook folder.")
+
+        # Show file selection dialog
+        from PyQt6.QtWidgets import QInputDialog
+        selected_file, ok = QInputDialog.getItem(
+            self.course_detail_window,
+            "Select Textbook",
+            "Choose a PDF to decon:",
+            pdf_files,
+            0,
+            False
+        )
+        if not ok or not selected_file:
+            return
+
+        # Confirm action
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(
+            self.course_detail_window,
+            "Decon Textbook",
+            f"This will:\n"
+            f"1. Analyze chapter structure using Gemini AI\n"
+            f"2. Split PDF into individual chapter files\n"
+            f"3. Save to: {textbook_dir}/decon/\n\n"
+            f"Continue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        # Run decon in background thread
+        file_path = os.path.join(textbook_dir, selected_file)
+
+        def run_decon(console, progress):
+            try:
+                progress.update_progress(1, 7, "Step 1/7: Selecting model...")
+
+                sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+                from upPromptFiles import upload_files, call_ai
+                from model_selector import get_best_gemini_model, get_model_display_name
+                from pdf_splitter import split_pdf_by_chapters
+                from pdf_bookmark_extractor import extract_chapters_from_bookmarks, format_bookmark_chapters, repair_pdf_references
+                from PyPDF2 import PdfReader, PdfWriter
+                import json
+                import tempfile
+
+                # Step 1: Select best Gemini model
+                try:
+                    best_model = get_best_gemini_model()
+                    model_name = get_model_display_name(best_model)
+                    console.append(f"✓ Model: {model_name}")
+                except Exception as e:
+                    model_name = 'gemini-2.0-flash-exp'
+                    console.append(f"! Fallback model: {model_name}")
+
+                # Step 2: Load PDF and try bookmark extraction first
+                progress.update_progress(2, 7, "Step 2/7: Loading PDF...")
+                reader = PdfReader(file_path)
+                total_pages = len(reader.pages)
+                console.append(f"✓ PDF has {total_pages} pages")
+
+                # Track repaired PDF path for cleanup
+                repaired_pdf_path = None
+
+                # PRIORITY: Try bookmark extraction first
+                console.append("\n📖 Checking for embedded bookmarks...")
+                all_chapters = extract_chapters_from_bookmarks(file_path, total_pages)
+
+                if all_chapters:
+                    # SUCCESS: Found valid continuous chapters from bookmarks
+                    console.append("✓ Found valid chapter bookmarks (continuous from Chapter 1)")
+                    console.append(format_bookmark_chapters(all_chapters))
+                    console.append("\n⚡ Skipping AI analysis - using bookmark data")
+
+                    # CRITICAL: Repair PDF references before splitting
+                    # This prevents thousands of "Object ID X,0 ref repaired" warnings
+                    console.append("")
+                    repaired_pdf_path = repair_pdf_references(file_path, console)
+
+                    # Update reader to use repaired PDF for splitting
+                    if repaired_pdf_path and repaired_pdf_path != file_path:
+                        reader = PdfReader(repaired_pdf_path)
+                        # Use repaired PDF for splitting
+                        pdf_to_split = repaired_pdf_path
+                    else:
+                        pdf_to_split = file_path
+
+                    # Convert to expected format
+                    all_chapters = [
+                        {
+                            'chapter': ch['chapter_number'],
+                            'name': ch['chapter_name'],
+                            'start_page': ch['start_page'],
+                            'end_page': ch['end_page']
+                        }
+                        for ch in all_chapters
+                    ]
+
+                else:
+                    # FALLBACK: No bookmarks found, use AI analysis
+                    console.append("! No valid bookmarks found - falling back to AI analysis")
+                    pdf_to_split = file_path  # Use original PDF for AI path
+
+                    # Extract first 200 pages for TOC + chapter 1 analysis
+                    TOC_PAGES = min(200, total_pages)
+                    writer = PdfWriter()
+                    for i in range(TOC_PAGES):
+                        writer.add_page(reader.pages[i])
+
+                    temp_toc_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='_toc.pdf')
+                    writer.write(temp_toc_pdf)
+                    temp_toc_pdf.close()
+                    console.append(f"✓ Extracted first {TOC_PAGES} pages")
+
+                    # Step 3: Analyze TOC and calculate delta
+                    progress.update_progress(3, 7, "Step 3/7: Analyzing TOC...")
+                    uploaded_info = upload_files([temp_toc_pdf.name], 'Gemini')
+
+                    toc_prompt = """Analyze this textbook PDF (first 200 pages) and extract the Table of Contents.
+
+Your task has TWO CRITICAL STEPS:
+
+STEP 1: Read the Table of Contents
+- Find all chapter entries with page numbers
+- Record what page number the TOC says each chapter starts on
+
+STEP 2: Find the ACTUAL start of Chapter 1
+- Scroll through the PDF to find where Chapter 1 ACTUALLY begins
+- Look for the actual chapter title page (e.g., "Chapter 1: Introduction")
+- Note which PDF page number this is (count from the start of THIS file)
+- This is critical because the book may have covers, prefaces, etc. before Chapter 1
+
+STEP 3: Calculate delta
+- delta = (book_page_of_chapter_1 - pdf_page_where_chapter_1_actually_starts)
+- Example: If TOC says "Chapter 1, Page 1" but Chapter 1 title appears on PDF page 17:
+  delta = 1 - 17 = -16
+
+Return ONLY a valid JSON object:
+{
+  "delta": -16,
+  "chapter_1_pdf_page": 17,
+  "chapter_1_book_page": 1,
+  "chapters": [
+    {"chapter": 1, "name": "Introduction", "book_page": 1},
+    {"chapter": 2, "name": "Cell Biology", "book_page": 25}
+  ]
+}
+
+CRITICAL RULES:
+1. "delta" MUST be calculated from the ACTUAL Chapter 1 title page, NOT just the TOC entry
+2. "chapter_1_pdf_page": The PDF page number where Chapter 1 ACTUALLY starts (for verification)
+3. "chapter_1_book_page": What page number the TOC says Chapter 1 starts on (usually 1)
+4. "chapters": ONLY include chapters with actual page numbers. Skip "online", "web", or numberless entries
+5. Return ONLY the JSON object, no markdown, no explanations"""
+
+                    result = call_ai(toc_prompt, 'Gemini', model_name, uploaded_info=uploaded_info)
+                    os.unlink(temp_toc_pdf.name)
+
+                    # Step 4: Parse TOC
+                    progress.update_progress(4, 7, "Step 4/7: Parsing TOC...")
+                    result_clean = result.strip()
+                    if result_clean.startswith('```'):
+                        lines = result_clean.split('\n')
+                        result_clean = '\n'.join(lines[1:-1]) if len(lines) > 2 else result_clean
+
+                    try:
+                        toc_data = json.loads(result_clean)
+                    except json.JSONDecodeError as e:
+                        console.append(f"[ERROR] JSON parse failed: {e}")
+                        console.append(f"Raw: {result_clean[:300]}...")
+                        raise
+
+                    delta = toc_data.get('delta', 0)
+                    toc_chapters = toc_data.get('chapters', [])
+
+                    # Verify delta calculation (new fields for validation)
+                    ch1_pdf = toc_data.get('chapter_1_pdf_page')
+                    ch1_book = toc_data.get('chapter_1_book_page')
+
+                    if ch1_pdf and ch1_book:
+                        expected_delta = ch1_book - ch1_pdf
+                        if expected_delta != delta:
+                            console.append(f"! Delta verification failed:")
+                            console.append(f"  AI reported delta={delta}")
+                            console.append(f"  But Chapter 1: book_page={ch1_book}, pdf_page={ch1_pdf}")
+                            console.append(f"  Expected delta={expected_delta}")
+                            console.append(f"  → Auto-correcting to delta={expected_delta}")
+                            delta = expected_delta
+                        else:
+                            console.append(f"✓ Delta verified: {delta} (Ch1: book_p{ch1_book} = pdf_p{ch1_pdf})")
+                        console.append(f"✓ Found {len(toc_chapters)} chapters from TOC")
+                    else:
+                        # Fallback: Try to verify by checking first chapter's calculated position
+                        console.append(f"✓ Found {len(toc_chapters)} chapters from TOC, delta={delta}")
+                        if toc_chapters:
+                            first_ch = toc_chapters[0]
+                            if first_ch.get('chapter') == 1:
+                                predicted_pdf_page = first_ch.get('book_page', 1) - delta
+                                console.append(f"  → Predicted Chapter 1 at PDF page {predicted_pdf_page}")
+                                console.append(f"  ! Please verify this is correct (check if off by ~16-17 pages)")
+
+                    # Step 5: Convert book pages to PDF pages
+                    progress.update_progress(5, 7, "Step 5/7: Converting to PDF pages...")
+                    all_chapters = []
+                    last_toc_book_page = 0
+
+                    for ch in toc_chapters:
+                        book_page = ch.get('book_page', 0)
+                        pdf_start = book_page - delta
+                        last_toc_book_page = max(last_toc_book_page, book_page)
+
+                        all_chapters.append({
+                            'chapter': ch.get('chapter'),
+                            'name': ch.get('name'),
+                            'start_page': pdf_start,
+                            'end_page': None  # Will be filled later
+                        })
+
+                    # Calculate where to start scanning (after last TOC chapter)
+                    # Estimate: last chapter likely ~50 pages, so start from last_book_page + 50
+                    scan_start_book_page = last_toc_book_page + 50
+                    scan_start_pdf_page = scan_start_book_page - delta
+
+                    console.append(f"✓ Converted {len(all_chapters)} chapters")
+                    console.append(f"  Last TOC book page: {last_toc_book_page} → PDF page {last_toc_book_page - delta}")
+
+                    # Step 5.5: Scan remaining pages if < 500 pages left
+                    remaining_pages = total_pages - scan_start_pdf_page
+                    if remaining_pages > 0 and remaining_pages < 500:
+                        console.append(f"\n! Scanning {remaining_pages} remaining pages (from PDF page {scan_start_pdf_page})...")
+                        progress.update_progress(5, 7, f"Step 5/7: Scanning {remaining_pages} remaining pages...")
+
+                        # Extract remaining pages
+                        writer = PdfWriter()
+                        for i in range(scan_start_pdf_page - 1, total_pages):  # -1 for 0-based indexing
+                            writer.add_page(reader.pages[i])
+
+                        temp_tail_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='_tail.pdf')
+                        writer.write(temp_tail_pdf)
+                        temp_tail_pdf.close()
+
+                        # Analyze remaining section
+                        tail_uploaded = upload_files([temp_tail_pdf.name], 'Gemini')
+                        tail_prompt = f"""Analyze this PDF section (pages {scan_start_pdf_page}-{total_pages} of the full textbook).
+Identify all formal chapters that START in this section, and find where each chapter ENDS.
+
+Return ONLY a valid JSON array:
+[
+  {{"chapter": 16, "name": "First-Order Differential Equations", "start_page": 1, "end_page": 34}},
+  {{"chapter": 17, "name": "Second-Order Differential Equations", "start_page": 35, "end_page": 60}}
+]
+
+IMPORTANT:
+- start_page and end_page are relative to THIS section (1 = first page = PDF page {scan_start_pdf_page})
+- end_page should be the LAST page of the chapter (before practice exercises, or next chapter, or appendix)
+- ONLY include formal numbered chapters with format "Chapter NN: Title"
+- DO NOT include: Appendices (Appendix A/B/C), Index, Answers, Table of Contents, or any unnumbered sections
+- Return ONLY the JSON array"""
+
+                        tail_result = call_ai(tail_prompt, 'Gemini', model_name, uploaded_info=tail_uploaded)
+                        os.unlink(temp_tail_pdf.name)
+
+                        # Parse tail chapters
+                        tail_clean = tail_result.strip()
+                        if tail_clean.startswith('```'):
+                            lines = tail_clean.split('\n')
+                            tail_clean = '\n'.join(lines[1:-1]) if len(lines) > 2 else tail_clean
+
+                        try:
+                            tail_chapters = json.loads(tail_clean)
+                            if isinstance(tail_chapters, list):
+                                for ch in tail_chapters:
+                                    relative_start = ch.get('start_page', 1)
+                                    relative_end = ch.get('end_page')
+
+                                    pdf_start = scan_start_pdf_page + relative_start - 1
+                                    pdf_end = scan_start_pdf_page + relative_end - 1 if relative_end else None
+
+                                    all_chapters.append({
+                                        'chapter': ch.get('chapter'),
+                                        'name': ch.get('name'),
+                                        'start_page': pdf_start,
+                                        'end_page': pdf_end
+                                    })
+                                console.append(f"  ✓ Found {len(tail_chapters)} additional chapters")
+                        except:
+                            console.append(f"  ! Failed to parse tail chapters, skipping")
+
+                    # Deduplicate by chapter number (keep first occurrence)
+                    seen_chapters = set()
+                    unique_chapters = []
+                    for ch in all_chapters:
+                        ch_num = ch.get('chapter')
+                        if ch_num not in seen_chapters:
+                            seen_chapters.add(ch_num)
+                            unique_chapters.append(ch)
+                    all_chapters = unique_chapters
+
+                    # Sort and fill end_page
+                    all_chapters.sort(key=lambda x: x['start_page'])
+                    for i in range(len(all_chapters)):
+                        if all_chapters[i]['end_page'] is None:
+                            if i < len(all_chapters) - 1:
+                                all_chapters[i]['end_page'] = all_chapters[i + 1]['start_page'] - 1
+                            else:
+                                all_chapters[i]['end_page'] = total_pages
+
+                    console.append(f"✓ Total: {len(all_chapters)} chapters")
+
+                # Step 6: Validate and fix boundaries
+                progress.update_progress(6, 7, "Step 6/7: Validating boundaries...")
+                for i in range(len(all_chapters) - 1):
+                    current = all_chapters[i]
+                    next_ch = all_chapters[i + 1]
+                    if current.get('end_page', 0) >= next_ch.get('start_page', 0):
+                        current['end_page'] = next_ch['start_page'] - 1
+                console.append(f"✓ Validated {len(all_chapters)} chapters")
+
+                # Step 7: Save and split
+                progress.update_progress(7, 7, f"Step 7/7: Splitting into {len(all_chapters)} PDFs...")
+                decon_dir = os.path.join(textbook_dir, 'decon')
+                os.makedirs(decon_dir, exist_ok=True)
+
+                metadata_file = os.path.join(decon_dir, f"{os.path.splitext(selected_file)[0]}_chapters.json")
+                with open(metadata_file, 'w', encoding='utf-8') as f:
+                    json.dump(all_chapters, f, indent=2, ensure_ascii=False)
+
+                # Use repaired PDF if available (bookmark path), otherwise original (AI path)
+                created_files = split_pdf_by_chapters(pdf_to_split, all_chapters, decon_dir)
+
+                progress.update_progress(7, 7, f"✓ Complete: {len(created_files)} chapters")
+                console.append(f"\n✓ Decon complete: {len(created_files)} chapter PDFs")
+                console.append(f"  Output: {decon_dir}")
+
+                # Cleanup: Remove temporary repaired PDF
+                if repaired_pdf_path and repaired_pdf_path != file_path and os.path.exists(repaired_pdf_path):
+                    try:
+                        os.unlink(repaired_pdf_path)
+                        console.append("✓ Cleaned up temporary repaired PDF")
+                    except:
+                        pass  # Ignore cleanup errors
+
+            except Exception as e:
+                import traceback
+                progress.set_text_only(f"✗ Failed: {str(e)[:50]}")
+                console.append(f"\n[ERROR] {e}")
+                console.append(traceback.format_exc())
+
+                # Cleanup on error too
+                if 'repaired_pdf_path' in locals() and repaired_pdf_path and repaired_pdf_path != file_path:
+                    try:
+                        os.unlink(repaired_pdf_path)
+                    except:
+                        pass
+
+        from gui import qt_interact
+        console, progress = qt_interact._create_console_tab(self.main_window.consoleTabWidget, f"Decon: {selected_file}", with_progress=True)
+
+        def run_with_progress(c):
+            run_decon(c, progress)
+
+        qt_interact._run_in_thread(run_with_progress, console, "Decon Textbook")
     def on_course_detail_item_double_clicked(self, item):
         if not self.course_detail_mgr: return
         item_data = item.data(Qt.ItemDataRole.UserRole + 1)
@@ -922,6 +1376,13 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
         if preview_html:
             adw.aiPreviewView.setHtml(preview_html)
             adw.previewStatusLabel.setText("Status: Preview loaded")
+    def _refresh_current_category(self):
+        """Refresh current category in CourseDetail window"""
+        if not self.course_detail_mgr: return
+        cdw = self.course_detail_window
+        current_row = cdw.categoryList.currentRow()
+        if current_row >= 0:
+            self.on_course_detail_category_changed(current_row)
     def on_hw_submit_clicked(self):
         """Submit homework to Canvas"""
         if not self.auto_detail_mgr: return
@@ -939,10 +1400,13 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
                 success = getHomework.submit_to_canvas(url)
                 if success:
                     adw.previewStatusLabel.setText("Status: Submitted successfully")
+                    self.show_toast("Homework 提交成功！", 'success')
                 else:
                     adw.previewStatusLabel.setText("Status: Submission failed")
+                    self.show_toast("Homework 提交失败", 'error')
             except Exception as e:
                 adw.previewStatusLabel.setText(f"Status: Error - {str(e)}")
+                self.show_toast(f"提交错误: {str(e)}", 'error')
         threading.Thread(target=run, daemon=True).start()
         adw.previewStatusLabel.setText("Status: Submitting...")
     def on_quiz_submit_clicked(self):
@@ -960,14 +1424,17 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
                 import json
                 if not hasattr(self, '_last_quiz_result'):
                     self.auto_detail_signal.status_update.emit("Status: No preview data - generate first")
+                    self.show_toast("需要先生成预览", 'warning')
                     return
                 result = self._last_quiz_result; s = result['session']
                 doc = result['doc']; url = result['url']
                 qs = result['questions']; ans = result['answers']
                 getQuiz_ultra.submit(s, url, doc, qs, ans, skip_confirm=True)
                 self.auto_detail_signal.status_update.emit("Status: Submitted successfully")
+                self.show_toast("Quiz 提交成功！", 'success')
             except Exception as e:
                 self.auto_detail_signal.status_update.emit(f"Status: Error - {str(e)}")
+                self.show_toast(f"提交错误: {str(e)}", 'error')
         threading.Thread(target=run, daemon=True).start()
         adw.previewStatusLabel.setText("Status: Submitting...")
     def on_view_detail_clicked(self):
@@ -1022,7 +1489,7 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
                     if ii >= 0:
                         courses = self.dm.get('courses')
                         if ii < len(courses):
-                            self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'))
+                            self.course_detail_mgr = CourseDetailManager(courses[ii], self.dm.get('todos'), self.dm.get('history_todos'))
                             self.populate_course_detail_window()
                             self.stacked_widget.setCurrentWidget(self.course_detail_window)
                             return True

@@ -21,6 +21,8 @@ pillow>=11.0.0
 html2text>=2024.2.26
 markdownify>=0.13.0
 markdown>=3.7
+PyPDF2>=3.0.0
+pikepdf>=9.0.0
 
 # PyQt6 (GUI framework)
 PyQt6>=6.8.0

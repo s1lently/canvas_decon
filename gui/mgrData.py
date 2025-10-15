@@ -21,13 +21,13 @@ class DataManager:
             except: pass
 
     def _load_todos(self):
-        tf = os.path.join(config.ROOT_DIR, 'todos.json')
+        tf = config.TODOS_FILE
         if os.path.exists(tf):
             try: self.data['todos'] = json.load(open(tf))
             except: pass
 
     def _load_history_todos(self):
-        hf = os.path.join(config.ROOT_DIR, 'his_todo.json')
+        hf = config.HIS_TODO_FILE
         if os.path.exists(hf):
             try: self.data['history_todos'] = json.load(open(hf))
             except: pass

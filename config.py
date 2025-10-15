@@ -17,12 +17,18 @@ import json
 # 获取项目根目录(本文件所在目录)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# 数据文件路径(存放在根目录)
-COOKIES_FILE = os.path.join(ROOT_DIR, 'cookies.json')
-ACCOUNT_CONFIG_FILE = os.path.join(ROOT_DIR, 'account_config.json')
-PERSONAL_INFO_FILE = os.path.join(ROOT_DIR, 'personal_info.json')
-COURSE_FILE = os.path.join(ROOT_DIR, 'course.json')
-DONE_FILE = os.path.join(ROOT_DIR, 'Done.txt')
+# JSON数据目录
+JSONS_DIR = os.path.join(ROOT_DIR, 'misc', 'jsons')
+
+# 数据文件路径(存放在misc/jsons/)
+COOKIES_FILE = os.path.join(JSONS_DIR, 'cookies.json')
+ACCOUNT_CONFIG_FILE = os.path.join(ROOT_DIR, 'account_config.json')  # Keep in root (user config, gitignored)
+PERSONAL_INFO_FILE = os.path.join(JSONS_DIR, 'personal_info.json')
+COURSE_FILE = os.path.join(JSONS_DIR, 'course.json')
+TODOS_FILE = os.path.join(JSONS_DIR, 'todos.json')
+HIS_TODO_FILE = os.path.join(JSONS_DIR, 'his_todo.json')
+LEARN_PREFERENCES_FILE = os.path.join(JSONS_DIR, 'learn_preferences.json')
+DONE_FILE = os.path.join(JSONS_DIR, 'Done.txt')
 
 # TODO 工作目录 (统一自动化工作空间)
 TODO_DIR = os.path.join(ROOT_DIR, 'todo')
@@ -134,6 +140,7 @@ DO NOT generate images for text-only calculation questions or written reflection
 
 def ensure_dirs():
     """确保所有必要的目录存在"""
+    os.makedirs(JSONS_DIR, exist_ok=True)
     os.makedirs(TODO_DIR, exist_ok=True)
     os.makedirs(COURSES_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)  # For CLI debugging

@@ -41,7 +41,7 @@ class AutoDetailWindowHandler(BaseHandler):
                 self.auto_detail_mgr.todo['assignment_details'] = {}
             self.auto_detail_mgr.todo['assignment_details']['assignment_folder'] = assignment_folder
             try:
-                todos_data = json.load(open(os.path.join(config.ROOT_DIR, 'todos.json')))
+                todos_data = json.load(open(config.TODOS_FILE))
                 for todo in todos_data:
                     if (todo.get('name') == self.auto_detail_mgr.todo.get('name') and
                         todo.get('due_date') == self.auto_detail_mgr.todo.get('due_date')):
@@ -49,7 +49,7 @@ class AutoDetailWindowHandler(BaseHandler):
                             todo['assignment_details'] = {}
                         todo['assignment_details']['assignment_folder'] = assignment_folder
                         break
-                json.dump(todos_data, open(os.path.join(config.ROOT_DIR, 'todos.json'), 'w'), indent=2)
+                json.dump(todos_data, open(config.TODOS_FILE, 'w'), indent=2)
             except Exception as e:
                 print(f"Warning: Failed to save assignment_folder to todos.json: {e}")
         prompt_type = 'quiz' if is_quiz else 'homework'

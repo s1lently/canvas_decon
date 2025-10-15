@@ -91,7 +91,7 @@ def fetch_assignment_details(session, assignment_url, assignment_name, due_date,
         return result
     except Exception as e: return {'error': str(e)}
 def process_and_save_todos(todos, session):
-    output_path = os.path.join(config.ROOT_DIR, 'todos.json'); existing = {}
+    output_path = config.TODOS_FILE; existing = {}
     if os.path.exists(output_path):
         with open(output_path, 'r', encoding='utf-8') as f: [existing.update({t.get('redirect_url'): t}) for t in json.load(f) if t.get('redirect_url')]
     todo_dir = config.TODO_DIR; os.makedirs(todo_dir, exist_ok=True)

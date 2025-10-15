@@ -72,6 +72,28 @@ class SignalInitializer:
         aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(aw.consoleTabWidget, app))
         aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(aw.consoleTabWidget))
 
+        # Automation tabs (4 tabs: Auto Open, Auto Close, All Automatable, All Items)
+        tab_prefixes = ['automatableOpen', 'automatableClose', 'automatable', 'allItems']
+        for tab_idx, prefix in enumerate(tab_prefixes):
+            category_list = getattr(aw, f'{prefix}CategoryList')
+            item_list = getattr(aw, f'{prefix}ItemList')
+
+            # Category filter
+            category_list.currentRowChanged.connect(
+                lambda idx, ti=tab_idx: app.automation_handler.on_category_changed(idx, ti)
+            )
+
+            # Item selection
+            item_list.currentRowChanged.connect(
+                lambda idx, ti=tab_idx: app.automation_handler.on_item_changed(idx, ti)
+            )
+
+            # Checkbox changes
+            item_list.itemChanged.connect(app.automation_handler.on_checkbox_changed)
+
+            # Double-click to open AutoDetail
+            item_list.itemDoubleClicked.connect(app.automation_handler.on_item_double_clicked)
+
         # Console tab close
         aw.consoleTabWidget.tabCloseRequested.connect(app.automation_handler.close_tab)
 

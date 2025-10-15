@@ -136,8 +136,8 @@ def on_get_todo_clicked(tw, mw=None):
 
     def success():
         if mw:
-            mw.load_data()
-            mw.on_category_changed(mw.main_window.categoryList.currentRow())
+            mw.main_handler.load_data()
+            mw.main_handler.on_category_changed(mw.main_window.categoryList.currentRow())
             mw.show_toast("TODOs 获取完成！", 'success')
 
     # Launch both threads
@@ -153,7 +153,7 @@ def on_get_course_clicked(tw, mw=None):
         c.append("✓ Courses saved")
     def success():
         if mw:
-            mw.load_data()
+            mw.main_handler.load_data()
             mw.update_status()
             mw.show_toast("Courses 获取完成！", 'success')
     _run_in_thread(run, _create_console_tab(tw, "Get Courses"), "getCourses", success)

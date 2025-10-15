@@ -195,7 +195,7 @@ def save_history_todos(todos):
         import traceback
         traceback.print_exc()
         # Fallback: save directly (WARNING: overwrites entire file!)
-        output_path = os.path.join(config.ROOT_DIR, 'his_todo.json')
+        output_path = config.HIS_TODO_FILE
         print(f"[WARNING] Using fallback save - existing data will be lost!")
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(todos, f, indent=2, ensure_ascii=False)

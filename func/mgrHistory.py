@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
 
-HIS_TODO_FILE = os.path.join(config.ROOT_DIR, 'his_todo.json')
+HIS_TODO_FILE = config.HIS_TODO_FILE
 
 def _parse_due(due):
     """Parse due_date string to datetime"""
@@ -110,7 +110,7 @@ def archive_past_todos():
     """Move past-due todos from todos.json to his_todo.json (preserves existing history data)"""
     if not os.path.exists(config.COURSE_FILE.replace('course.json', 'todos.json')): return
 
-    todos_file = os.path.join(config.ROOT_DIR, 'todos.json')
+    todos_file = config.TODOS_FILE
     with open(todos_file, 'r', encoding='utf-8') as f:
         todos = json.load(f)
 

@@ -71,7 +71,7 @@ def _check_json_data_file(filepath):
 
 def check_todo_list():
     """Check if todos.json exists and has valid content"""
-    return _check_json_data_file(os.path.join(os.path.dirname(__file__), 'todos.json'))
+    return _check_json_data_file(config.TODOS_FILE)
 
 
 def check_network():

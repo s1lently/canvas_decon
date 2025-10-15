@@ -8,7 +8,7 @@ import config
 
 
 # Preferences file location
-PREFERENCES_FILE = os.path.join(config.ROOT_DIR, 'learn_preferences.json')
+PREFERENCES_FILE = config.LEARN_PREFERENCES_FILE
 
 
 # Default preferences (without hardcoded models)

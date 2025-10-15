@@ -72,6 +72,12 @@ class LearnSittingWidget(QWidget):
 
         self.textbook_list = QListWidget()
         self.textbook_list.setMinimumHeight(250)
+        self.textbook_list.setAcceptDrops(True)
+        self.textbook_list.setDragEnabled(False)
+        from PyQt6.QtWidgets import QAbstractItemView
+        self.textbook_list.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
+        self.textbook_list.dragEnterEvent = self._drag_enter_textbook
+        self.textbook_list.dropEvent = self._drop_textbook
         textbook_layout.addWidget(self.textbook_list)
 
         # Buttons
@@ -754,3 +760,29 @@ class LearnSittingWidget(QWidget):
         QMessageBox.information(self, "Test Prompt",
                                "Prompt test feature coming soon!\n\n"
                                "This will allow you to test your prompt with a sample file.")
+
+    # ========== DRAG AND DROP ==========
+    def _drag_enter_textbook(self, event):
+        """Handle drag enter event for textbook list"""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+
+    def _drop_textbook(self, event):
+        """Handle drop event for textbook list"""
+        if event.mimeData().hasUrls():
+            import shutil
+            textbook_dir = self.course_detail_mgr.get_textbook_dir()
+
+            for url in event.mimeData().urls():
+                file_path = url.toLocalFile()
+                if os.path.isfile(file_path):
+                    filename = os.path.basename(file_path)
+                    dest_path = os.path.join(textbook_dir, filename)
+                    try:
+                        shutil.copy2(file_path, dest_path)
+                        print(f"[DRAG-DROP] Copied: {filename} → {textbook_dir}")
+                    except Exception as e:
+                        print(f"[DRAG-DROP] Error copying {filename}: {e}")
+
+            event.acceptProposedAction()
+            self.load_data()  # Refresh file list

@@ -76,9 +76,10 @@ class LearnSittingWidget(QWidget):
         self.textbook_list.setDragEnabled(False)
         from PyQt6.QtWidgets import QAbstractItemView
         self.textbook_list.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
-        # Use lambda to properly bind event handlers
-        self.textbook_list.dragEnterEvent = lambda event: self._drag_enter_textbook(event)
-        self.textbook_list.dropEvent = lambda event: self._drop_textbook(event)
+        # Bind drag-drop handlers - capture self reference to avoid lambda scope issues
+        learn_widget = self
+        self.textbook_list.dragEnterEvent = lambda event: learn_widget._handle_drag_enter(event)
+        self.textbook_list.dropEvent = lambda event: learn_widget._handle_drop(event)
         textbook_layout.addWidget(self.textbook_list)
 
         # Buttons
@@ -762,12 +763,12 @@ class LearnSittingWidget(QWidget):
                                "This will allow you to test your prompt with a sample file.")
 
     # ========== DRAG AND DROP ==========
-    def _drag_enter_textbook(self, event):
+    def _handle_drag_enter(self, event):
         """Handle drag enter event for textbook list"""
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
-    def _drop_textbook(self, event):
+    def _handle_drop(self, event):
         """Handle drop event for textbook list"""
         if event.mimeData().hasUrls():
             import shutil

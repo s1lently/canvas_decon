@@ -206,14 +206,36 @@ class CourseDetailWindowHandler(BaseHandler):
                 from utilPdfSplitter import split_pdf_by_chapters
                 from utilPdfBookmark import extract_chapters_from_bookmarks, format_bookmark_chapters, repair_pdf_references
                 from PyPDF2 import PdfReader, PdfWriter
+                from gui.learn.cfgLearnPrefs import get_product, get_model as get_pref_model
 
-                try:
-                    best_model = get_best_gemini_model()
-                    model_name = get_model_display_name(best_model)
-                    console.append(f"✓ Model: {model_name}")
-                except Exception as e:
-                    model_name = 'gemini-2.0-flash-exp'
-                    console.append(f"! Fallback model: {model_name}")
+                # Get user's model preference from Learn Preferences
+                pref_product = get_product()
+                pref_model = get_pref_model()
+
+                # Resolve model based on preferences
+                if pref_product == 'Auto' or pref_model == 'Auto':
+                    # Auto mode: use best available Gemini model
+                    try:
+                        best_model = get_best_gemini_model()
+                        model_name = get_model_display_name(best_model)
+                        console.append(f"✓ Model: {model_name} (Auto-selected)")
+                    except Exception as e:
+                        model_name = 'gemini-2.0-flash-exp'
+                        console.append(f"! Fallback model: {model_name}")
+                elif pref_product == 'Gemini':
+                    # Use user-selected Gemini model
+                    model_name = pref_model
+                    console.append(f"✓ Model: {model_name} (User-selected)")
+                else:
+                    # Decon only supports Gemini, fallback to best Gemini
+                    console.append(f"! Decon requires Gemini, but {pref_product} selected in preferences")
+                    try:
+                        best_model = get_best_gemini_model()
+                        model_name = get_model_display_name(best_model)
+                        console.append(f"✓ Using Gemini fallback: {model_name}")
+                    except:
+                        model_name = 'gemini-2.0-flash-exp'
+                        console.append(f"! Fallback model: {model_name}")
 
                 progress.update_progress(2, 7, "Step 2/7: Loading PDF...")
                 reader = PdfReader(file_path)

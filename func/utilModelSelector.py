@@ -43,17 +43,25 @@ def get_best_gemini_model(api_key=None):
         # Fallback to known model
         return 'models/gemini-2.0-flash-exp'
 
-    # Sort by: version (descending), pro > flash, stable > preview
-    # Example: gemini-2.0-pro > gemini-2.0-flash > gemini-1.5-pro
-    best_model = sorted(
-        models,
-        key=lambda x: (
-            tuple(map(float, re.findall(r'\d+\.\d+', x)[0].split('.'))),  # Version number
-            'flash' not in x,  # Pro models before Flash
-            'preview' not in x  # Stable before preview
-        ),
-        reverse=True
-    )[0]
+    # Sort by: version (descending), pro > flash, stable (no preview) > preview
+    # Example: gemini-2.0-pro > gemini-2.0-flash-exp > gemini-1.5-pro > gemini-2.0-flash-preview
+    def sort_key(model_name):
+        # Extract version (e.g., "2.0" from "models/gemini-2.0-flash-exp")
+        version_match = re.search(r'gemini-(\d+)\.(\d+)', model_name)
+        if version_match:
+            major, minor = int(version_match.group(1)), int(version_match.group(2))
+        else:
+            major, minor = 0, 0
+
+        # Pro优先 (pro=1, flash=0)
+        is_pro = 1 if 'pro' in model_name and 'flash' not in model_name else 0
+
+        # 没preview优先 (stable=1, preview=0)
+        is_stable = 1 if 'preview' not in model_name else 0
+
+        return (major, minor, is_pro, is_stable)
+
+    best_model = sorted(models, key=sort_key, reverse=True)[0]
 
     return best_model
 

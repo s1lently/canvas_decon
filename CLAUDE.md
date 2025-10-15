@@ -341,15 +341,21 @@ def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False
         return _claude(prompt, model, uploaded_info=uploaded_info, thinking=thinking)
 
 def _gemini(prompt, model, uploaded_info=None):
-    import google.generativeai as genai
-    genai.configure(api_key=config.GEMINI_API_KEY)
-    m = genai.GenerativeModel(model)
+    from google import genai
+    client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-    if not uploaded_info:
-        return m.generate_content([prompt]).text
+    # 构建 contents
+    contents = [prompt]
+    if uploaded_info:
+        # 添加上传的文件
+        contents.extend([info['uploaded_obj'] for info in uploaded_info])
 
-    uploaded_objs = [info['uploaded_obj'] for info in uploaded_info]
-    return m.generate_content([prompt] + uploaded_objs).text
+    # 调用 API
+    response = client.models.generate_content(
+        model=model,
+        contents=contents
+    )
+    return response.text
 
 def _claude(prompt, model, uploaded_info=None, thinking=False):
     import anthropic

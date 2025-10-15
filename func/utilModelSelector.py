@@ -1,5 +1,5 @@
 """Smart model selection for Gemini and Claude"""
-import google.generativeai as genai
+from google import genai
 import json
 import re
 import os
@@ -26,14 +26,18 @@ def get_best_gemini_model(api_key=None):
     if not api_key:
         raise ValueError("Gemini API key not found")
 
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
 
     # List all models that support generateContent
-    models = [
-        m.name for m in genai.list_models()
-        if 'generateContent' in m.supported_generation_methods
-        and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
-    ]
+    try:
+        all_models = list(client.models.list())
+        models = [
+            m.name for m in all_models
+            if 'generateContent' in m.supported_generation_methods
+            and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
+        ]
+    except:
+        models = []
 
     if not models:
         # Fallback to known model
@@ -139,11 +143,12 @@ def get_all_gemini_models(api_key=None):
         return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
 
     try:
-        genai.configure(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
         # List all models that support generateContent
+        all_models = list(client.models.list())
         models = [
-            m.name for m in genai.list_models()
+            m.name for m in all_models
             if 'generateContent' in m.supported_generation_methods
             and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
         ]

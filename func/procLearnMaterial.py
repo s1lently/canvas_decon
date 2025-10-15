@@ -574,7 +574,7 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None, use_
         model_pref = None
         if use_preferences:
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
-            from cfgLearnPrefs import get_prompt, get_product, get_model
+            from gui.learn.cfgLearnPrefs import get_prompt, get_product, get_model
 
             # Get product/model from preferences
             product_pref = get_product()

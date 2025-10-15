@@ -5,6 +5,7 @@ from PyQt6.QtCore import Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from gui.qt_utils.base_handler import BaseHandler
 from gui.details.mgrCourseDetail import CourseDetailManager
+from gui.details.mgrAutoDetail import AutoDetailManager
 from gui.widgets import rdrDelegates as delegates
 
 
@@ -80,5 +81,8 @@ class LauncherHandler(BaseHandler):
         todo = item.data(Qt.ItemDataRole.UserRole + 1)
         if todo:
             classification = self.dm.classify_todo(todo)
-            self.app.auto_detail_handler.open(todo, classification)
-            self.hide()
+            if classification.get('is_automatable'):
+                self.app.auto_detail_mgr = AutoDetailManager(todo)
+                self.app.auto_detail_handler.populate_window()
+                self.stacked_widget.setCurrentWidget(self.auto_detail_window)
+                self.hide()

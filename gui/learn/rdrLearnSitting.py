@@ -467,7 +467,7 @@ class LearnSittingWidget(QWidget):
             console.append("=" * 80)
 
             # Show notification
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             if failed_files:
                 show_toast(
                     self.canvas_app,
@@ -519,10 +519,10 @@ class LearnSittingWidget(QWidget):
         # Show toast notification
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}\n当前模型: {resolved_model}", 'success', 3000)
         except Exception as e:
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}", 'success', 3000)
 
     def on_pref_model_changed(self, model):
@@ -544,13 +544,13 @@ class LearnSittingWidget(QWidget):
         # Show toast notification
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             if model == 'Auto':
                 show_toast(self.canvas_app, f"Model 设为 Auto\n实际使用: {resolved_model}", 'success', 3000)
             else:
                 show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
         except Exception as e:
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
 
     def update_current_model_display(self):
@@ -619,10 +619,10 @@ class LearnSittingWidget(QWidget):
         # Show toast
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}\n当前模型: {resolved_model}", 'success', 3000)
         except:
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}", 'success', 3000)
 
     def on_adv_model_changed(self, model):
@@ -642,13 +642,13 @@ class LearnSittingWidget(QWidget):
         # Show toast
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             if model == 'Auto':
                 show_toast(self.canvas_app, f"Model 设为 Auto\n实际使用: {resolved_model}", 'success', 3000)
             else:
                 show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
         except:
-            from gui.rdrToast import show_toast
+            from gui.widgets.rdrToast import show_toast
             show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
 
     def update_available_models_list(self):
@@ -669,7 +669,7 @@ class LearnSittingWidget(QWidget):
             return
 
         try:
-            from cfgLearnPrefs import refresh_available_models
+            from gui.learn.cfgLearnPrefs import refresh_available_models
 
             # Show loading message
             self.available_models_list.setPlainText("⏳ Fetching from API...")
@@ -729,7 +729,7 @@ class LearnSittingWidget(QWidget):
             'csv': DEFAULT_CSV_PROMPT
         }
 
-        from cfgLearnPrefs import set_prompt
+        from gui.learn.cfgLearnPrefs import set_prompt
         if prompt_text != defaults[prompt_type]:
             set_prompt(prompt_type, prompt_text)
         else:
@@ -738,7 +738,7 @@ class LearnSittingWidget(QWidget):
         # Update Tab 2
         self.update_prompt_preview()
 
-        from gui.rdrToast import show_toast
+        from gui.widgets.rdrToast import show_toast
         show_toast(self.canvas_app, f"Prompt 模板已保存 ({prompt_type})", 'success', 3000)
 
     def on_reset_prompt_type(self):

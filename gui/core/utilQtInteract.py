@@ -33,7 +33,7 @@ def _create_console_tab(tw, name, with_progress=False):
         tuple (ThreadSafeConsole, progress_widget) if with_progress=True
     """
     if with_progress:
-        from gui.wgtProgress import create_console_with_progress
+        from gui.widgets.wgtProgress import create_console_with_progress
         console_widget, progress_widget = create_console_with_progress(tw, name)
         return ThreadSafeConsole(console_widget), progress_widget
     else:
@@ -375,7 +375,7 @@ def on_learn_material_clicked(canvas_app, console_widget=None):
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
     from procLearnMaterial import get_default_prompt
-    from cfgLearnPrefs import get_prompt
+    from gui.learn.cfgLearnPrefs import get_prompt
 
     # Determine prompt type
     ext = os.path.splitext(file_path)[1].lower()

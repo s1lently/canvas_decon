@@ -503,6 +503,107 @@
         </item>
        </layout>
       </widget>
+      <widget class="QWidget" name="tasksTab">
+       <attribute name="title">
+        <string>📊 Tasks</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="tasksTabLayout">
+        <item>
+         <widget class="QLabel" name="tasksInfoLabel">
+          <property name="text">
+           <string>Active Background Tasks</string>
+          </property>
+          <property name="styleSheet">
+           <string>font-size: 16px; font-weight: bold; color: #3b82f6;</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="tasksTable">
+          <property name="alternatingRowColors">
+           <bool>true</bool>
+          </property>
+          <property name="selectionBehavior">
+           <enum>QAbstractItemView::SelectRows</enum>
+          </property>
+          <property name="minimumHeight">
+           <number>400</number>
+          </property>
+          <column>
+           <property name="text">
+            <string>Task Name</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Start Time</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="tasksButtonLayout">
+          <item>
+           <widget class="QPushButton" name="refreshTasksBtn">
+            <property name="text">
+             <string>🔄 Refresh</string>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>40</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="stopTaskBtn">
+            <property name="text">
+             <string>⏹️ Stop Selected</string>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>150</width>
+              <height>40</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="stopAllTasksBtn">
+            <property name="text">
+             <string>⏹️ Stop All</string>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>120</width>
+              <height>40</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="tasksHorizontalSpacer">
+            <property name="orientation">
+             <enum>Qt::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>40</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </widget>
     </item>
    </layout>

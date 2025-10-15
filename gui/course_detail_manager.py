@@ -152,7 +152,7 @@ class CourseDetailManager:
         return items
 
     def _get_learn(self):
-        """Get files in Learn directory"""
+        """Get files in Learn directory + reports"""
         learn_dir = os.path.join(self.course_dir, 'Learn')
 
         if not os.path.exists(learn_dir):
@@ -167,35 +167,84 @@ class CourseDetailManager:
                 if os.path.isfile(item_path):
                     files.append(item)
 
-        if not files:
+        reports_dir = os.path.join(learn_dir, 'reports')
+
+        # Get all reports (md files)
+        reports = []
+        if os.path.exists(reports_dir):
+            for item in os.listdir(reports_dir):
+                if item.endswith('.md'):
+                    reports.append(item)
+
+        if not files and not reports:
             return [{'name': 'No learning materials - drag files here or Load From Decon', 'type': 'placeholder', 'data': {'folder': learn_dir}}]
 
         items = []
-        reports_dir = os.path.join(learn_dir, 'reports')
 
         # Natural sort (Chapter_1, Chapter_2, ..., Chapter_10)
         import re
         def natural_sort_key(s):
             return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
 
+        # First add files with reports
         for filename in sorted(files, key=natural_sort_key):
-            # Check if report exists
             base_name = os.path.splitext(filename)[0]
             report_path = os.path.join(reports_dir, f"{base_name}.md")
             has_report = os.path.exists(report_path)
 
-            items.append({
-                'name': filename,
-                'type': 'learn_file',
-                'has_file': True,
-                'has_report': has_report,
-                'data': {
-                    'filename': filename,
-                    'path': os.path.join(learn_dir, filename),
-                    'folder': learn_dir,
-                    'report_path': report_path if has_report else None
-                }
-            })
+            if has_report:
+                items.append({
+                    'name': filename,
+                    'type': 'learn_file',
+                    'has_file': True,
+                    'has_report': True,
+                    'data': {
+                        'filename': filename,
+                        'path': os.path.join(learn_dir, filename),
+                        'folder': learn_dir,
+                        'report_path': report_path
+                    }
+                })
+
+        # Then add files without reports
+        for filename in sorted(files, key=natural_sort_key):
+            base_name = os.path.splitext(filename)[0]
+            report_path = os.path.join(reports_dir, f"{base_name}.md")
+            has_report = os.path.exists(report_path)
+
+            if not has_report:
+                items.append({
+                    'name': filename,
+                    'type': 'learn_file',
+                    'has_file': True,
+                    'has_report': False,
+                    'data': {
+                        'filename': filename,
+                        'path': os.path.join(learn_dir, filename),
+                        'folder': learn_dir,
+                        'report_path': None
+                    }
+                })
+
+        # Finally add orphan reports (reports without source files)
+        for report in sorted(reports, key=natural_sort_key):
+            base_name = os.path.splitext(report)[0]
+            # Check if corresponding source file exists
+            source_exists = any(base_name == os.path.splitext(f)[0] for f in files)
+            if not source_exists:
+                items.append({
+                    'name': f"📄 {report}",
+                    'type': 'learn_report_only',
+                    'has_file': False,
+                    'has_report': True,
+                    'data': {
+                        'filename': report,
+                        'path': os.path.join(reports_dir, report),
+                        'folder': reports_dir,
+                        'report_path': os.path.join(reports_dir, report)
+                    }
+                })
+
         return items
 
     def get_learn_dir(self):

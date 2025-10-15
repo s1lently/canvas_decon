@@ -6,17 +6,35 @@ from datetime import datetime
 
 
 class FileItemDelegate(QStyledItemDelegate):
-    """Green dot indicator for files that exist locally"""
+    """Green dot indicator for files that exist locally, blue dot for md reports"""
     def paint(self, painter, option, index):
         super().paint(painter, option, index)
-        if index.data(Qt.ItemDataRole.UserRole):
-            painter.save()
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            x, y = option.rect.right() - 15, option.rect.center().y()
-            painter.setBrush(QColor(34, 197, 94))
+
+        # Get item data
+        has_file = index.data(Qt.ItemDataRole.UserRole)
+        item_data = index.data(Qt.ItemDataRole.UserRole + 1)
+        has_report = item_data.get('has_report', False) if isinstance(item_data, dict) else False
+
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        x_base = option.rect.right() - 15
+        y = option.rect.center().y()
+
+        # Draw green dot if file exists
+        if has_file:
+            painter.setBrush(QColor(34, 197, 94))  # Green
             painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(QPoint(x, y), 5, 5)
-            painter.restore()
+            painter.drawEllipse(QPoint(x_base, y), 5, 5)
+
+        # Draw blue dot if report exists (to the left of green dot)
+        if has_report:
+            x_report = x_base - 14  # 14px spacing
+            painter.setBrush(QColor(59, 130, 246))  # Blue
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(QPoint(x_report, y), 5, 5)
+
+        painter.restore()
 
     def sizeHint(self, option, index):
         size = super().sizeHint(option, index)

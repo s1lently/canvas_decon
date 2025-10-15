@@ -246,15 +246,17 @@ def get_default_prompt(file_path):
         return DEFAULT_PDF_PROMPT
 
 
-def process_text_file(file_path, output_md_path, console=None, custom_prompt=None):
+def process_text_file(file_path, output_md_path, console=None, custom_prompt=None, product=None, model=None):
     """
-    Process text files (py, js, txt, etc.) with Claude
+    Process text files (py, js, txt, etc.) with AI
 
     Args:
         file_path: Path to input file
         output_md_path: Path to output markdown report
         console: Optional console widget for output
         custom_prompt: Optional custom prompt template (overrides default)
+        product: Optional product override (from preferences)
+        model: Optional model override (from preferences)
     """
     def log(msg):
         if console:
@@ -263,19 +265,31 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
             print(msg)
 
     try:
-        from model_selector import get_best_anthropic_model, get_model_display_name
+        from model_selector import get_best_anthropic_model, get_best_gemini_model, get_model_display_name
         from upPromptFiles import call_ai
 
         log(f"📄 Processing text file: {os.path.basename(file_path)}")
 
-        # Get best Claude model
-        try:
-            best_model = get_best_anthropic_model()
-            model_name = get_model_display_name(best_model)
-            log(f"✓ Model: {model_name}")
-        except Exception as e:
-            model_name = 'claude-sonnet-4-20250514'
-            log(f"! Fallback model: {model_name}")
+        # Determine product/model from preferences or auto-select
+        if product is None or product == 'Auto':
+            product = 'Claude'  # Default for text files
+
+        if model is None or model == 'Auto':
+            # Auto-select best model for product
+            try:
+                if product == 'Claude':
+                    best_model = get_best_anthropic_model()
+                    model_name = get_model_display_name(best_model)
+                else:  # Gemini
+                    best_model = get_best_gemini_model()
+                    model_name = get_model_display_name(best_model)
+                log(f"✓ Model: {model_name} ({product})")
+            except Exception as e:
+                model_name = 'claude-sonnet-4-20250514' if product == 'Claude' else 'gemini-2.0-flash-exp'
+                log(f"! Fallback model: {model_name} ({product})")
+        else:
+            model_name = model
+            log(f"✓ Model: {model_name} ({product})")
 
         # Read file content
         with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
@@ -316,8 +330,8 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
                 content=content
             )
 
-        log("🤖 Generating analysis with Claude...")
-        result = call_ai(prompt, 'Claude', model_name)
+        log(f"🤖 Generating analysis with {product}...")
+        result = call_ai(prompt, product, model_name)
 
         # Save report
         with open(output_md_path, 'w', encoding='utf-8') as f:
@@ -418,15 +432,17 @@ def convert_office_to_pdf(file_path, console=None):
         return None
 
 
-def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=None):
+def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=None, product=None, model=None):
     """
-    Process PDF or CSV files with Gemini
+    Process PDF or CSV files with AI
 
     Args:
         file_path: Path to input file (PDF or CSV)
         output_md_path: Path to output markdown report
         console: Optional console widget
         custom_prompt: Optional custom prompt template (overrides default)
+        product: Optional product override (from preferences)
+        model: Optional model override (from preferences)
     """
     def log(msg):
         if console:
@@ -435,24 +451,41 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
             print(msg)
 
     try:
-        from model_selector import get_best_gemini_model, get_model_display_name
+        from model_selector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
         from upPromptFiles import upload_files, call_ai
 
         ext = os.path.splitext(file_path)[1].lower()
         log(f"📄 Processing {ext.upper()} file: {os.path.basename(file_path)}")
 
-        # Get best Gemini model
-        try:
-            best_model = get_best_gemini_model()
-            model_name = get_model_display_name(best_model)
-            log(f"✓ Model: {model_name}")
-        except Exception as e:
-            model_name = 'gemini-2.0-flash-exp'
-            log(f"! Fallback model: {model_name}")
+        # Determine product/model from preferences or auto-select
+        if product is None or product == 'Auto':
+            product = 'Gemini'  # Default for PDF/CSV (better vision)
 
-        # Upload file
-        log("📤 Uploading file to Gemini...")
-        uploaded_info = upload_files([file_path], 'Gemini')
+        if model is None or model == 'Auto':
+            # Auto-select best model for product
+            try:
+                if product == 'Gemini':
+                    best_model = get_best_gemini_model()
+                    model_name = get_model_display_name(best_model)
+                else:  # Claude
+                    best_model = get_best_anthropic_model()
+                    model_name = get_model_display_name(best_model)
+                log(f"✓ Model: {model_name} ({product})")
+            except Exception as e:
+                model_name = 'gemini-2.0-flash-exp' if product == 'Gemini' else 'claude-sonnet-4-20250514'
+                log(f"! Fallback model: {model_name} ({product})")
+        else:
+            model_name = model
+            log(f"✓ Model: {model_name} ({product})")
+
+        # Upload file for both Gemini and Claude
+        # Note: CSV requires special handling for Claude (no file upload, use text content)
+        if ext == '.csv' and product == 'Claude':
+            log(f"! Note: CSV with Claude - will use text content instead of file upload")
+            uploaded_info = None
+        else:
+            log(f"📤 Uploading file to {product}...")
+            uploaded_info = upload_files([file_path], product)
 
         # Generate prompt
         if custom_prompt:
@@ -478,8 +511,8 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
                     csv_preview=csv_preview
                 )
 
-        log("🤖 Generating analysis with Gemini...")
-        result = call_ai(prompt, 'Gemini', model_name, uploaded_info=uploaded_info)
+        log(f"🤖 Generating analysis with {product}...")
+        result = call_ai(prompt, product, model_name, uploaded_info=uploaded_info)
 
         # Save report
         with open(output_md_path, 'w', encoding='utf-8') as f:
@@ -495,7 +528,7 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
         return False
 
 
-def learn_material(file_path, course_dir, console=None, custom_prompt=None):
+def learn_material(file_path, course_dir, console=None, custom_prompt=None, use_preferences=True):
     """
     Main entry point: Analyze any study material and generate markdown report
 
@@ -510,7 +543,8 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None):
         file_path: Path to input file
         course_dir: Course directory (e.g., Courses/course_name)
         console: Optional console widget
-        custom_prompt: Optional custom prompt template (overrides default)
+        custom_prompt: Optional custom prompt template (overrides default and preferences)
+        use_preferences: If True, load prompt from preferences when custom_prompt is None
 
     Returns:
         Path to generated report, or None if failed
@@ -535,13 +569,39 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None):
 
         ext = os.path.splitext(file_path)[1].lower()
 
-        # Text files → Claude
+        # Load preferences (prompt + product/model)
+        product_pref = None
+        model_pref = None
+        if use_preferences:
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
+            from learn_preferences import get_prompt, get_product, get_model
+
+            # Get product/model from preferences
+            product_pref = get_product()
+            model_pref = get_model()
+            log(f"✓ Using preferences: Product={product_pref}, Model={model_pref}")
+
+            # Get custom prompt if available
+            if custom_prompt is None:
+                # Determine prompt type based on file extension
+                if ext in ['.py', '.js', '.java', '.cpp', '.c', '.go', '.rs', '.txt', '.md', '.json', '.xml', '.html', '.css', '.sh']:
+                    prompt_type = 'text'
+                elif ext == '.csv':
+                    prompt_type = 'csv'
+                else:
+                    prompt_type = 'pdf'
+
+                custom_prompt = get_prompt(prompt_type)
+                if custom_prompt:
+                    log(f"✓ Using custom prompt from preferences ({prompt_type})")
+
+        # Text files
         text_extensions = ['.py', '.js', '.java', '.cpp', '.c', '.go', '.rs',
                           '.txt', '.md', '.json', '.xml', '.html', '.css', '.sh']
 
         if ext in text_extensions:
-            log("📝 Text file detected → Using Claude")
-            success = process_text_file(file_path, output_md_path, console, custom_prompt)
+            log("📝 Text file detected")
+            success = process_text_file(file_path, output_md_path, console, custom_prompt, product_pref, model_pref)
 
         # Office files → Convert first
         elif ext in ['.docx', '.pptx', '.xlsx']:
@@ -549,8 +609,8 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None):
             converted_path = convert_office_to_pdf(file_path, console)
 
             if converted_path:
-                log(f"✓ Conversion successful → Processing with Gemini")
-                success = process_pdf_or_csv(converted_path, output_md_path, console, custom_prompt)
+                log(f"✓ Conversion successful")
+                success = process_pdf_or_csv(converted_path, output_md_path, console, custom_prompt, product_pref, model_pref)
 
                 # Cleanup temporary converted file if different from original
                 if converted_path != file_path and '_converted' in converted_path:
@@ -563,10 +623,10 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None):
                 log("✗ Conversion failed")
                 success = False
 
-        # PDF/CSV → Gemini directly
+        # PDF/CSV
         elif ext in ['.pdf', '.csv']:
-            log("📄 PDF/CSV file detected → Using Gemini")
-            success = process_pdf_or_csv(file_path, output_md_path, console, custom_prompt)
+            log("📄 PDF/CSV file detected")
+            success = process_pdf_or_csv(file_path, output_md_path, console, custom_prompt, product_pref, model_pref)
 
         else:
             log(f"✗ Unsupported file type: {ext}")

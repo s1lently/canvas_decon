@@ -118,10 +118,98 @@ def get_model_display_name(full_name):
     return full_name.replace('models/', '')
 
 
+def get_all_gemini_models(api_key=None):
+    """Get all available Gemini models
+
+    Args:
+        api_key: Optional API key
+
+    Returns:
+        list: List of model names (display format, without 'models/' prefix)
+    """
+    if not api_key:
+        try:
+            with open(config.ACCOUNT_CONFIG_FILE) as f:
+                api_key = json.load(f).get('gemini_api_key')
+        except:
+            pass
+
+    if not api_key:
+        # Return fallback list
+        return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+
+    try:
+        genai.configure(api_key=api_key)
+
+        # List all models that support generateContent
+        models = [
+            m.name for m in genai.list_models()
+            if 'generateContent' in m.supported_generation_methods
+            and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
+        ]
+
+        # Convert to display names and sort
+        display_names = sorted([get_model_display_name(m) for m in models], reverse=True)
+        return display_names if display_names else ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+
+    except Exception as e:
+        print(f"Error fetching Gemini models: {e}")
+        return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+
+
+def get_all_claude_models(api_key=None):
+    """Get all available Claude models
+
+    Args:
+        api_key: Optional API key
+
+    Returns:
+        list: List of model names
+    """
+    if not api_key:
+        try:
+            with open(config.ACCOUNT_CONFIG_FILE) as f:
+                api_key = json.load(f).get('claude_api_key')
+        except:
+            pass
+
+    if not api_key:
+        # Return fallback list
+        return ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229']
+
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+
+        # List available models
+        models = client.models.list()
+
+        # Filter for Claude models and sort
+        claude_models = sorted([
+            m.id for m in models.data
+            if m.id.startswith('claude-')
+        ], reverse=True)
+
+        return claude_models if claude_models else ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229']
+
+    except Exception as e:
+        print(f"Error fetching Claude models: {e}")
+        return ['claude-sonnet-4-20250514', 'claude-3-5-sonnet-20241022', 'claude-3-opus-20240229']
+
+
 if __name__ == "__main__":
     # Test
     try:
+        print("=== Testing Gemini ===")
         best = get_best_gemini_model()
         print(f"Best Gemini model: {get_model_display_name(best)}")
+        all_gemini = get_all_gemini_models()
+        print(f"All Gemini models: {all_gemini}")
+
+        print("\n=== Testing Claude ===")
+        best = get_best_anthropic_model()
+        print(f"Best Claude model: {best}")
+        all_claude = get_all_claude_models()
+        print(f"All Claude models: {all_claude}")
     except Exception as e:
         print(f"Error: {e}")

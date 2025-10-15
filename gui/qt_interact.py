@@ -47,20 +47,61 @@ def _create_console_tab(tw, name, with_progress=False):
         tw.setCurrentIndex(tw.addTab(tab, name))
         return ThreadSafeConsole(console)
 
-def _run_in_thread(func, console, name, on_success=None):
-    """Execute in daemon thread"""
+def _run_in_thread(func, console, name, on_success=None, task_id=None):
+    """Execute in daemon thread with task management
+
+    Args:
+        func: Function to run (receives console and stop_event)
+        console: Console object
+        name: Task name
+        on_success: Callback on success
+        task_id: Unique task ID (defaults to thread name)
+    """
+    from gui.task_manager import get_task_manager
+
     console.append(f"[INFO] {name} started")
+
+    # Create stop event
+    stop_event = threading.Event()
+
     def wrapper():
+        tid = task_id or threading.current_thread().name
         try:
             console.append(f"[INFO] Starting {name}...")
-            func(console)
-            console.append(f"[SUCCESS] {name} completed")
-            if on_success: on_success()
+
+            # Check if function accepts stop_event parameter
+            import inspect
+            sig = inspect.signature(func)
+            if 'stop_event' in sig.parameters:
+                func(console, stop_event=stop_event)
+            else:
+                func(console)
+
+            # Check if stopped
+            if stop_event.is_set():
+                console.append(f"[WARNING] {name} stopped by user")
+            else:
+                console.append(f"[SUCCESS] {name} completed")
+                if on_success:
+                    on_success()
         except Exception as e:
-            import traceback
-            console.append(f"[ERROR] {name} failed: {e}")
-            console.append(traceback.format_exc())
-    threading.Thread(target=wrapper, daemon=True).start()
+            if not stop_event.is_set():  # Don't show error if stopped
+                import traceback
+                console.append(f"[ERROR] {name} failed: {e}")
+                console.append(traceback.format_exc())
+        finally:
+            # Unregister task
+            get_task_manager().unregister_task(tid)
+
+    # Start thread
+    thread = threading.Thread(target=wrapper, daemon=True, name=task_id)
+    thread.start()
+
+    # Register task
+    tid = task_id or thread.name
+    get_task_manager().register_task(tid, name, thread, stop_event, console)
+
+    return tid  # Return task ID for tracking
 
 def on_login_clicked(main_window, stacked_widget, login_window, app_instance=None):
     stacked_widget.setCurrentWidget(login_window)
@@ -290,17 +331,34 @@ def on_learn_material_clicked(canvas_app):
     course_name = canvas_app.course_detail_mgr.get_course_name()
     filename = os.path.basename(file_path)
 
-    # Get default prompt for this file type and show dialog
+    # Get default prompt from preferences or fall back to built-in default
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
     from learn_material import get_default_prompt
+    from learn_preferences import get_prompt
 
-    default_prompt = get_default_prompt(file_path)
+    # Determine prompt type
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in ['.py', '.js', '.java', '.cpp', '.c', '.go', '.rs', '.txt', '.md', '.json', '.xml', '.html', '.css', '.sh']:
+        prompt_type = 'text'
+    elif ext == '.csv':
+        prompt_type = 'csv'
+    else:
+        prompt_type = 'pdf'
+
+    # Try to get custom prompt from preferences first
+    default_prompt = get_prompt(prompt_type)
+    if not default_prompt:
+        # Fall back to built-in default
+        default_prompt = get_default_prompt(file_path)
 
     from PyQt6.QtWidgets import QInputDialog
     prompt, ok = QInputDialog.getMultiLineText(
         cdw,
         "Edit Learning Prompt (编辑学习提示词)",
-        f"Customize AI prompt for: {filename}\n\nAvailable placeholders:\n"
+        f"Customize AI prompt for: {filename}\n\n"
+        f"💡 Tip: Leave unchanged to use saved preferences\n\n"
+        f"Available placeholders:\n"
         "  {{filename}} - File name\n"
         "  {{file_type}} - File type (for text files)\n"
         "  {{content}} - File content (for text files)\n"
@@ -308,8 +366,11 @@ def on_learn_material_clicked(canvas_app):
         default_prompt
     )
 
-    if not ok or not prompt.strip():
-        return  # User cancelled or empty prompt
+    if not ok:
+        return  # User cancelled
+
+    # If user cleared the prompt, use None to trigger preference loading in learn_material
+    custom_prompt = prompt.strip() if prompt.strip() else None
 
     # Create console in main thread
     console = _create_console_tab(canvas_app.main_window.consoleTabWidget, f"Learn: {filename}")
@@ -323,7 +384,7 @@ def on_learn_material_clicked(canvas_app):
         console.append(f"Course: {course_name}")
         console.append(f"{'='*80}\n")
 
-        report_path = learn_material(file_path, course_dir, console, custom_prompt=prompt.strip())
+        report_path = learn_material(file_path, course_dir, console, custom_prompt=custom_prompt, use_preferences=True)
 
         if report_path:
             console.append(f"\n{'='*80}")

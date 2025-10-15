@@ -1,6 +1,6 @@
 import sys, os, time, threading, json, re, requests, html2text, webbrowser, subprocess, platform; from datetime import datetime, timedelta
 from io import StringIO
-from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QListWidgetItem, QListWidget, QMessageBox, QStyledItemDelegate, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout, QLineEdit
+from PyQt6.QtWidgets import QApplication, QMainWindow, QStackedWidget, QListWidgetItem, QListWidget, QMessageBox, QStyledItemDelegate, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout, QLineEdit, QTableWidgetItem
 from PyQt6.QtCore import pyqtSignal, QObject, Qt, QEvent
 from PyQt6.uic import loadUi
 from bs4 import BeautifulSoup
@@ -11,6 +11,7 @@ from gui.data_manager import DataManager
 from gui.done_manager import DoneManager
 from gui.course_detail_manager import CourseDetailManager
 from gui.auto_detail_manager import AutoDetailManager
+from gui.learn_sitting_renderer import LearnSittingWidget
 from gui.styles import DARK_THEME
 from gui.ios_toggle import IOSToggle
 class StatusUpdateSignal(QObject):
@@ -28,6 +29,7 @@ class CanvasApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.dm, self.done_mgr, self.course_detail_mgr, self.auto_detail_mgr = DataManager(), DoneManager(), None, None
+        self.learn_sitting_widget = None  # 3-tab widget for Textbook category
         self.history_mode = False; self.status_signal = StatusUpdateSignal()
         self.status_signal.update.connect(self.update_status)
         self.tab_content_signal = TabContentSignal()
@@ -243,6 +245,7 @@ class CanvasApp(QMainWindow):
                              ('gSyllAllBtn', lambda: qt_interact.on_gsyll_all_clicked(mw.consoleTabWidget)),
                              ('cleanBtn', self._show_clean_dialog),
                              ('automationTopBtn', self.on_automation_top_clicked),
+                             ('sittingBtn', self.on_sitting_clicked),
                              ('openFolderBtn', self.on_open_folder_clicked),
                              ('courseDetailBtn', self.on_course_detail_clicked)]:
             getattr(mw, btn).clicked.connect(handler)
@@ -260,6 +263,9 @@ class CanvasApp(QMainWindow):
             self._on_claude_api_focus()
             original_claude_focus(event)
         sw.claudeApiInput.focusInEvent = claude_focus_wrapper
+        sw.refreshTasksBtn.clicked.connect(self._refresh_tasks_table)
+        sw.stopTaskBtn.clicked.connect(self._stop_selected_task)
+        sw.stopAllTasksBtn.clicked.connect(self._stop_all_tasks)
         aw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(self.stacked_widget, mw))
         aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(aw.consoleTabWidget, self))
         aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(aw.consoleTabWidget))
@@ -669,6 +675,42 @@ class CanvasApp(QMainWindow):
         cdw.deconTextbookBtn.setVisible(category == 'Textbook')
         cdw.loadFromDeconBtn.setVisible(category == 'Learn')
         cdw.learnMaterialBtn.setVisible(category == 'Learn')
+
+        # Special handling for Textbook category: show 3-tab sitting widget
+        if category == 'Textbook':
+            # Remove old widget if exists
+            if self.learn_sitting_widget:
+                cdw.detailView.setParent(None)
+                self.learn_sitting_widget.setParent(None)
+                self.learn_sitting_widget.deleteLater()
+                self.learn_sitting_widget = None
+
+            # Create and insert LearnSittingWidget
+            self.learn_sitting_widget = LearnSittingWidget(self, self.course_detail_mgr, cdw)
+
+            # Replace detailView with the widget
+            layout = cdw.centralwidget.layout().itemAt(1).layout()  # contentLayout (HBoxLayout)
+            layout.removeWidget(cdw.detailView)
+            cdw.detailView.setVisible(False)
+            layout.addWidget(self.learn_sitting_widget)
+
+            # Hide itemList for Textbook (since tabs show files internally)
+            cdw.itemList.setVisible(False)
+            return
+        else:
+            # Restore normal layout if coming from Textbook
+            if self.learn_sitting_widget:
+                layout = cdw.centralwidget.layout().itemAt(1).layout()
+                layout.removeWidget(self.learn_sitting_widget)
+                self.learn_sitting_widget.setParent(None)
+                self.learn_sitting_widget.deleteLater()
+                self.learn_sitting_widget = None
+
+                cdw.detailView.setVisible(True)
+                layout.addWidget(cdw.detailView)
+
+            cdw.itemList.setVisible(True)
+
         items = self.course_detail_mgr.get_items_for_category(category)
         for item_data in items:
             item = QListWidgetItem(item_data['name'])
@@ -1449,9 +1491,42 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
         if path and os.path.exists(path):
             {'Windows': lambda: os.startfile(path), 'Darwin': lambda: subprocess.run(['open', path]), 'Linux': lambda: subprocess.run(['xdg-open', path])}.get(platform.system(), lambda: None)()
     def close_tab(self, index):
-        if index > 0: self.main_window.consoleTabWidget.removeTab(index)
+        if index > 0:
+            # Stop any task associated with this tab
+            self._stop_task_for_tab(self.main_window.consoleTabWidget, index)
+            self.main_window.consoleTabWidget.removeTab(index)
     def close_automation_tab(self, index):
-        if index > 0: self.automation_window.consoleTabWidget.removeTab(index)
+        if index > 0:
+            # Stop any task associated with this tab
+            self._stop_task_for_tab(self.automation_window.consoleTabWidget, index)
+            self.automation_window.consoleTabWidget.removeTab(index)
+    def _stop_task_for_tab(self, tab_widget, index):
+        """Stop any task associated with the given tab"""
+        from gui.task_manager import get_task_manager
+
+        # Get the console widget from the tab
+        tab = tab_widget.widget(index)
+        if not tab:
+            return
+
+        # Find the console widget (it's usually a QTextEdit)
+        from PyQt6.QtWidgets import QTextEdit
+        console_widget = tab.findChild(QTextEdit)
+        if not console_widget:
+            return
+
+        # Find any task with this console
+        task_manager = get_task_manager()
+        tasks = task_manager.get_all_tasks()
+
+        for task in tasks:
+            # Check if this task's console matches
+            if task.get('console') and hasattr(task['console'], 'console'):
+                # It's a ThreadSafeConsole wrapper, get the underlying widget
+                if task['console'].console == console_widget:
+                    task_manager.stop_task(task['id'])
+                    print(f"[INFO] Stopped task '{task['name']}' (tab closed)")
+                    break
     def _install_list_event_filters(self):
         for lst in [self.main_window.categoryList, self.main_window.itemList,
                     self.automation_window.automatableOpenCategoryList, self.automation_window.automatableOpenItemList,
@@ -1617,6 +1692,87 @@ ul,ol{{padding-left:24px}}li{{margin:4px 0}}
             if idx < len(lists) - 1 and lists[idx + 1]:
                 lists[idx + 1].setFocus()
                 if lists[idx + 1].count() > 0: lists[idx + 1].setCurrentRow(0)
+    def on_sitting_clicked(self):
+        """Open sitting window"""
+        self.stacked_widget.setCurrentWidget(self.sitting_window)
+        self._refresh_tasks_table()
+    def _refresh_tasks_table(self):
+        """Refresh tasks table with current running tasks"""
+        from gui.task_manager import get_task_manager
+        from datetime import datetime
+
+        table = self.sitting_window.tasksTable
+        table.setRowCount(0)
+
+        tasks = get_task_manager().get_all_tasks()
+        for task in tasks:
+            row = table.rowCount()
+            table.insertRow(row)
+
+            # Task name
+            table.setItem(row, 0, QTableWidgetItem(task['name']))
+
+            # Start time (formatted)
+            start_time = task['start_time'].strftime('%H:%M:%S')
+            table.setItem(row, 1, QTableWidgetItem(start_time))
+
+            # Status
+            status = task['status']
+            if task['thread'].is_alive():
+                status = 'Running'
+            else:
+                status = 'Completed'
+            table.setItem(row, 2, QTableWidgetItem(status))
+
+            # Store task ID in first column for reference
+            table.item(row, 0).setData(Qt.ItemDataRole.UserRole, task['id'])
+    def _stop_selected_task(self):
+        """Stop the selected task"""
+        from gui.task_manager import get_task_manager
+
+        table = self.sitting_window.tasksTable
+        current_row = table.currentRow()
+
+        if current_row < 0:
+            QMessageBox.warning(self, "No Selection", "Please select a task to stop.")
+            return
+
+        task_id = table.item(current_row, 0).data(Qt.ItemDataRole.UserRole)
+        task_name = table.item(current_row, 0).text()
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm Stop",
+            f"Are you sure you want to stop task:\n{task_name}?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            if get_task_manager().stop_task(task_id):
+                self.show_toast(f"Task '{task_name}' stopped", 'success')
+                self._refresh_tasks_table()
+            else:
+                QMessageBox.warning(self, "Error", "Failed to stop task.")
+    def _stop_all_tasks(self):
+        """Stop all running tasks"""
+        from gui.task_manager import get_task_manager
+
+        tasks = get_task_manager().get_all_tasks()
+        if not tasks:
+            QMessageBox.information(self, "No Tasks", "No running tasks to stop.")
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Confirm Stop All",
+            f"Are you sure you want to stop all {len(tasks)} running tasks?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            get_task_manager().stop_all_tasks()
+            self.show_toast(f"All tasks stopped", 'success')
+            self._refresh_tasks_table()
     def _show_clean_dialog(self):
         from clean import preview_deletion, clean_directory, build_tree, print_tree
         to_delete = preview_deletion()

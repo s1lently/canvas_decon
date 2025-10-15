@@ -285,7 +285,18 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
                     model_name = get_model_display_name(best_model)
                 log(f"✓ Model: {model_name} ({product})")
             except Exception as e:
-                model_name = 'claude-sonnet-4-20250514' if product == 'Claude' else 'gemini-2.0-flash-exp'
+                # Fallback to Auto model selection if error
+                from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
+                if product == 'Claude':
+                    try:
+                        model_name = get_model_display_name(get_best_anthropic_model())
+                    except:
+                        model_name = 'Auto'  # Let utilPromptFiles handle it
+                else:  # Gemini
+                    try:
+                        model_name = get_model_display_name(get_best_gemini_model())
+                    except:
+                        model_name = 'Auto'
                 log(f"! Fallback model: {model_name} ({product})")
         else:
             model_name = model
@@ -472,7 +483,18 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
                     model_name = get_model_display_name(best_model)
                 log(f"✓ Model: {model_name} ({product})")
             except Exception as e:
-                model_name = 'gemini-2.0-flash-exp' if product == 'Gemini' else 'claude-sonnet-4-20250514'
+                # Fallback to Auto model selection if error
+                from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
+                if product == 'Gemini':
+                    try:
+                        model_name = get_model_display_name(get_best_gemini_model())
+                    except:
+                        model_name = 'Auto'
+                else:  # Claude
+                    try:
+                        model_name = get_model_display_name(get_best_anthropic_model())
+                    except:
+                        model_name = 'Auto'
                 log(f"! Fallback model: {model_name} ({product})")
         else:
             model_name = model

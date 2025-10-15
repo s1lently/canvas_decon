@@ -219,7 +219,10 @@ def get_resolved_product_model():
             try:
                 model = get_model_display_name(get_best_gemini_model())
             except:
-                model = 'gemini-2.0-flash-exp'
+                try:
+                    model = get_model_display_name(get_best_gemini_model())
+                except:
+                    model = 'Auto'  # Fallback to Auto
         elif product == 'Claude':
             try:
                 model = get_model_display_name(get_best_anthropic_model())

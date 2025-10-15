@@ -213,29 +213,26 @@ class CourseDetailWindowHandler(BaseHandler):
                 pref_model = get_pref_model()
 
                 # Resolve model based on preferences
-                if pref_product == 'Auto' or pref_model == 'Auto':
-                    # Auto mode: use best available Gemini model
-                    try:
+                try:
+                    if pref_product == 'Auto' or pref_model == 'Auto':
+                        # Auto mode: use best available Gemini model
                         best_model = get_best_gemini_model()
                         model_name = get_model_display_name(best_model)
                         console.append(f"✓ Model: {model_name} (Auto-selected)")
-                    except Exception as e:
-                        model_name = 'gemini-2.0-flash-exp'
-                        console.append(f"! Fallback model: {model_name}")
-                elif pref_product == 'Gemini':
-                    # Use user-selected Gemini model
-                    model_name = pref_model
-                    console.append(f"✓ Model: {model_name} (User-selected)")
-                else:
-                    # Decon only supports Gemini, fallback to best Gemini
-                    console.append(f"! Decon requires Gemini, but {pref_product} selected in preferences")
-                    try:
+                    elif pref_product == 'Gemini':
+                        # Use user-selected Gemini model
+                        model_name = pref_model
+                        console.append(f"✓ Model: {model_name} (User-selected)")
+                    else:
+                        # Decon only supports Gemini, fallback to best Gemini
+                        console.append(f"! Decon requires Gemini, but {pref_product} selected in preferences")
                         best_model = get_best_gemini_model()
                         model_name = get_model_display_name(best_model)
                         console.append(f"✓ Using Gemini fallback: {model_name}")
-                    except:
-                        model_name = 'gemini-2.0-flash-exp'
-                        console.append(f"! Fallback model: {model_name}")
+                except Exception as e:
+                    console.append(f"[ERROR] Failed to select model: {e}")
+                    console.append("Please check your Gemini API key in Settings")
+                    return
 
                 progress.update_progress(2, 7, "Step 2/7: Loading PDF...")
                 reader = PdfReader(file_path)

@@ -29,24 +29,20 @@ def get_best_gemini_model(api_key=None):
     client = genai.Client(api_key=api_key)
 
     # List all models that support generateContent
-    try:
-        all_models = list(client.models.list())
-        models = [
-            m.name for m in all_models
-            if 'generateContent' in m.supported_generation_methods
-            and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
-        ]
-    except:
-        models = []
+    all_models = list(client.models.list())
+    models = [
+        m.name for m in all_models
+        if 'generateContent' in m.supported_actions
+        and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
+    ]
 
     if not models:
-        # Fallback to known model
-        return 'models/gemini-2.0-flash-exp'
+        raise ValueError("No compatible Gemini models found. Check your API key.")
 
-    # Sort by: version (descending), pro > flash, stable (no preview) > preview
-    # Example: gemini-2.0-pro > gemini-2.0-flash-exp > gemini-1.5-pro > gemini-2.0-flash-preview
+    # Sort by: version (descending), pro > flash, stable (no preview/exp/lite) > preview
+    # Priority: gemini-2.5-pro > gemini-2.5-flash > gemini-2.0-flash-exp > gemini-2.0-flash-preview
     def sort_key(model_name):
-        # Extract version (e.g., "2.0" from "models/gemini-2.0-flash-exp")
+        # Extract version (e.g., "2.5" from "models/gemini-2.5-flash")
         version_match = re.search(r'gemini-(\d+)\.(\d+)', model_name)
         if version_match:
             major, minor = int(version_match.group(1)), int(version_match.group(2))
@@ -56,13 +52,12 @@ def get_best_gemini_model(api_key=None):
         # Pro优先 (pro=1, flash=0)
         is_pro = 1 if 'pro' in model_name and 'flash' not in model_name else 0
 
-        # 没preview优先 (stable=1, preview=0)
-        is_stable = 1 if 'preview' not in model_name else 0
+        # 没preview/exp/lite优先 (stable=1, others=0)
+        is_stable = 1 if not any(x in model_name for x in ['preview', '-exp', 'lite']) else 0
 
         return (major, minor, is_pro, is_stable)
 
     best_model = sorted(models, key=sort_key, reverse=True)[0]
-
     return best_model
 
 
@@ -147,8 +142,8 @@ def get_all_gemini_models(api_key=None):
             pass
 
     if not api_key:
-        # Return fallback list
-        return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+        # No API key - return minimal fallback
+        return ['Auto']
 
     try:
         client = genai.Client(api_key=api_key)
@@ -157,17 +152,26 @@ def get_all_gemini_models(api_key=None):
         all_models = list(client.models.list())
         models = [
             m.name for m in all_models
-            if 'generateContent' in m.supported_generation_methods
+            if 'generateContent' in m.supported_actions
             and re.search(r'gemini-\d+\.\d+-(pro|flash)', m.name)
         ]
 
-        # Convert to display names and sort
-        display_names = sorted([get_model_display_name(m) for m in models], reverse=True)
-        return display_names if display_names else ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+        # Convert to display names and sort (version desc, pro > flash, stable > preview)
+        def sort_key(name):
+            display = get_model_display_name(name)
+            version_match = re.search(r'gemini-(\d+)\.(\d+)', display)
+            major, minor = (int(version_match.group(1)), int(version_match.group(2))) if version_match else (0, 0)
+            is_pro = 1 if 'pro' in display and 'flash' not in display else 0
+            is_stable = 1 if not any(x in display for x in ['preview', '-exp', 'lite']) else 0
+            return (major, minor, is_pro, is_stable)
+
+        sorted_models = sorted(models, key=sort_key, reverse=True)
+        display_names = [get_model_display_name(m) for m in sorted_models]
+        return display_names if display_names else ['Auto']
 
     except Exception as e:
         print(f"Error fetching Gemini models: {e}")
-        return ['gemini-2.0-flash-exp', 'gemini-1.5-pro', 'gemini-1.5-flash']
+        return ['Auto']
 
 
 def get_all_claude_models(api_key=None):

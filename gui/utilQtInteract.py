@@ -283,7 +283,7 @@ def on_load_from_decon_clicked(canvas_app):
 
     def run(console):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from learn_material import load_from_decon
+        from procLearnMaterial import load_from_decon
 
         console.append(f"{'='*80}")
         console.append(f"📚 Load From Decon: {course_name}")
@@ -334,8 +334,8 @@ def on_learn_material_clicked(canvas_app):
     # Get default prompt from preferences or fall back to built-in default
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
-    from learn_material import get_default_prompt
-    from learn_preferences import get_prompt
+    from procLearnMaterial import get_default_prompt
+    from cfgLearnPrefs import get_prompt
 
     # Determine prompt type
     ext = os.path.splitext(file_path)[1].lower()
@@ -377,7 +377,7 @@ def on_learn_material_clicked(canvas_app):
 
     def run(console):
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from learn_material import learn_material
+        from procLearnMaterial import learn_material
 
         console.append(f"{'='*80}")
         console.append(f"📚 Learn: {filename}")

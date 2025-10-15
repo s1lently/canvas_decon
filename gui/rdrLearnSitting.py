@@ -417,7 +417,7 @@ class LearnSittingWidget(QWidget):
 
         def run_batch():
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-            from learn_material import learn_material
+            from procLearnMaterial import learn_material
 
             console.append("=" * 80)
             console.append(f"🚀 Batch Learn: {len(files)} files")
@@ -572,7 +572,7 @@ class LearnSittingWidget(QWidget):
         else:
             # Show default prompt
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-            from learn_material import DEFAULT_PDF_PROMPT
+            from procLearnMaterial import DEFAULT_PDF_PROMPT
             self.prompt_preview.setPlainText(DEFAULT_PDF_PROMPT)
 
     def on_reset_prompt(self):
@@ -703,7 +703,7 @@ class LearnSittingWidget(QWidget):
         else:
             # Load default prompt
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-            from learn_material import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
+            from procLearnMaterial import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
 
             defaults = {
                 'text': DEFAULT_TEXT_PROMPT,
@@ -721,7 +721,7 @@ class LearnSittingWidget(QWidget):
 
         # Only save if different from default
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from learn_material import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
+        from procLearnMaterial import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
 
         defaults = {
             'text': DEFAULT_TEXT_PROMPT,

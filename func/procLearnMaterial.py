@@ -265,8 +265,8 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
             print(msg)
 
     try:
-        from model_selector import get_best_anthropic_model, get_best_gemini_model, get_model_display_name
-        from upPromptFiles import call_ai
+        from utilModelSelector import get_best_anthropic_model, get_best_gemini_model, get_model_display_name
+        from utilPromptFiles import call_ai
 
         log(f"📄 Processing text file: {os.path.basename(file_path)}")
 
@@ -451,8 +451,8 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
             print(msg)
 
     try:
-        from model_selector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
-        from upPromptFiles import upload_files, call_ai
+        from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
+        from utilPromptFiles import upload_files, call_ai
 
         ext = os.path.splitext(file_path)[1].lower()
         log(f"📄 Processing {ext.upper()} file: {os.path.basename(file_path)}")
@@ -574,7 +574,7 @@ def learn_material(file_path, course_dir, console=None, custom_prompt=None, use_
         model_pref = None
         if use_preferences:
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
-            from learn_preferences import get_prompt, get_product, get_model
+            from cfgLearnPrefs import get_prompt, get_product, get_model
 
             # Get product/model from preferences
             product_pref = get_product()

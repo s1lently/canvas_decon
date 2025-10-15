@@ -37,7 +37,7 @@ class MainWindowHandler(BaseHandler):
             if self.app.history_mode:
                 try:
                     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'func'))
-                    from history_manager import load_history
+                    from mgrHistory import load_history
                     todos = load_history()
                 except:
                     todos = []
@@ -105,7 +105,7 @@ class MainWindowHandler(BaseHandler):
         if ci == 1 and self.app.history_mode:
             try:
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'func'))
-                from history_manager import load_history
+                from mgrHistory import load_history
                 data = load_history()
             except:
                 data = []

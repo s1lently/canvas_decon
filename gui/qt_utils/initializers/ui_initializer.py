@@ -126,7 +126,7 @@ class UIInitializer:
         # Archive past todos
         try:
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'func'))
-            from history_manager import archive_past_todos
+            from mgrHistory import archive_past_todos
             archive_past_todos()
         except:
             pass

@@ -1,0 +1,44 @@
+# func/ 目录重命名计划
+
+## 命名规范分析
+当前func/已有良好的getXxx命名，需要补充规范：
+- getXxx.py  - 获取/抓取数据
+- procXxx.py - 处理/加工数据  
+- mgrXxx.py  - 管理器
+- utilXxx.py - 工具函数
+
+## 重命名方案
+
+### 保持不变 (已符合getXxx规范, 9个)
+func/getCourses.py          → 保持
+func/getHistoryTodos.py     → 保持
+func/getHomework.py         → 保持
+func/getQuiz_ultra.py       → 保持
+func/getSyll.py             → 保持
+func/getTodos.py            → 保持
+func/__init__.py            → 保持
+
+### 需要重命名 (6个)
+func/history_manager.py         → func/mgrHistory.py      (Manager)
+func/learn_material.py          → func/procLearnMaterial.py (处理学习材料)
+func/model_selector.py          → func/utilModelSelector.py (工具-模型选择)
+func/pdf_bookmark_extractor.py  → func/utilPdfBookmark.py   (工具-PDF书签)
+func/pdf_splitter.py            → func/utilPdfSplitter.py   (工具-PDF拆分)
+func/upPromptFiles.py           → func/utilPromptFiles.py   (工具-Prompt上传)
+
+## func/util/ 子目录 (9个小工具)
+需要归类识别哪些是废弃的：
+func/util/ask_with_pdf.py
+func/util/gCO.py
+func/util/getAPI.py
+func/util/getAss.py
+func/util/getHTML.py
+func/util/getQuiz_short.py
+func/util/gqu.py
+func/util/sel_test.py
+func/util/stQz.py
+
+## 废弃文件判断标准
+1. 无import引用
+2. 功能被新版本替代
+3. 测试/临时文件

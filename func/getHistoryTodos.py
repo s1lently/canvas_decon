@@ -184,7 +184,7 @@ def save_history_todos(todos):
     """Save to his_todo.json using history_manager (batch insert for efficiency, preserves existing data)"""
     try:
         sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from history_manager import batch_insert_or_update
+        from mgrHistory import batch_insert_or_update
 
         # Use batch insert with update_existing=False to preserve user data
         stats = batch_insert_or_update(todos, update_existing=False)

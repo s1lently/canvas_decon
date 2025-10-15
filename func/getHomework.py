@@ -4,7 +4,7 @@ from html import unescape
 from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
-from func import upPromptFiles
+from func import utilPromptFiles
 TARGET_ASSIGNMENT_URL = "https://psu.instructure.com/courses/2418560/assignments/17474475"
 COOKIES_FILE, OUTPUT_DIR, ANSWER_FILE, PERSONAL_INFO_FILE = config.COOKIES_FILE, config.OUTPUT_DIR, os.path.join(config.OUTPUT_DIR, 'answer.md'), config.PERSONAL_INFO_FILE
 def get_homework_details(url=None):
@@ -15,7 +15,7 @@ def get_homework_details(url=None):
 def ask_llm_with_pdfs(description, product, model, prompt, ref_files=[]):
     try: personal_info = json.load(open(PERSONAL_INFO_FILE)); personal_context = f"\n**Your Personal Information (USE THESE EXACT VALUES):**\n- Name: {personal_info['name']}\n- Age: {personal_info['age']} years\n- Weight: {personal_info['weight_kg']} kg ({personal_info['weight_lbs']} lbs)\n- Height: {personal_info['height_cm']} cm ({personal_info['height_inches']} inches)\n- Gender: {personal_info['gender']}\n- Location: {personal_info['location']}\n"
     except: personal_context = ""
-    full_prompt = f"{prompt}\n{personal_context}\n\n**Description:**\n{description}"; print(f"\n🤖 Calling {product} {model}..."); return upPromptFiles.call_ai(full_prompt, product, model, ref_files)
+    full_prompt = f"{prompt}\n{personal_context}\n\n**Description:**\n{description}"; print(f"\n🤖 Calling {product} {model}..."); return utilPromptFiles.call_ai(full_prompt, product, model, ref_files)
 def parse_img_requests(answer_text):
     img_requests = [{'name': m.group(1).strip(), 'description': d.group(1).strip()} for match in re.finditer(r'\[gen_img\]\s*\{([^}]+)\}', answer_text, re.DOTALL) if (m := re.search(r'name:\s*(.+?)(?:\n|$)', (content := match.group(1)))) and (d := re.search(r'des:\s*(.+?)(?:\n|$)', content, re.DOTALL))]
     return re.sub(r'\[gen_img\]\s*\{[^}]+\}', '', answer_text, flags=re.DOTALL).strip(), img_requests

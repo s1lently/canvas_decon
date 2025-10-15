@@ -309,7 +309,7 @@ class TodoItemDelegate(QStyledItemDelegate):
         # [Right to left: dots, type labels, due date]
 ```
 
-### func/upPromptFiles.py - Unified AI Interface
+### func/utilPromptFiles.py - Unified AI Interface
 
 ```python
 def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False):
@@ -698,34 +698,41 @@ for qdiv in question_divs:
 ### File Locations
 
 ```
-main.py                    # Entry point
-config.py                  # Paths + API keys + prompts
-checkStatus.py             # 5 validators
-clean.py                   # Garbage collection
+main.py                         # Entry point
+config.py                       # Paths + API keys + prompts
+checkStatus.py                  # 5 validators
+clean.py                        # Garbage collection
 
-gui/qt.py                  # Main app (1190 lines)
-gui/qt_interact.py         # Button handlers + threading
-gui/data_manager.py        # JSON loading
-gui/done_manager.py        # Checkbox persistence
-gui/delegates.py           # Custom renderers
-gui/ios_toggle.py          # Toggle widget
+gui/qt.py                       # Main app (227 lines, modular)
+gui/utilQtInteract.py           # Button handlers + threading
+gui/mgrData.py                  # JSON loading
+gui/mgrDone.py                  # Checkbox persistence
+gui/rdrDelegates.py             # Custom renderers
+gui/wgtIOSToggle.py             # Toggle widget
+gui/wgtSidebar.py               # Floating sidebar with animation
+gui/qt_utils/                   # Modular handlers + initializers
 
-func/getTodos.py           # Fetch TODOs + download files
-func/getCourses.py         # Fetch courses + tabs
-func/getHomework.py        # Homework automation
-func/getQuiz_ultra.py      # Quiz automation
-func/upPromptFiles.py      # Unified AI interface
+func/getTodos.py                # Fetch TODOs + download files
+func/getCourses.py              # Fetch courses + tabs
+func/getHomework.py             # Homework automation
+func/getQuiz_ultra.py           # Quiz automation
+func/utilPromptFiles.py         # Unified AI interface
 
-login/getCookie.py         # Selenium auto-login
-login/getTotp.py           # TOTP generation
+login/getCookie.py              # Selenium auto-login
+login/getTotp.py                # TOTP generation
+
+misc/jsons/                     # Runtime JSON data
 ```
 
 ### Key Constants (config.py)
 
 ```python
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+JSONS_DIR = os.path.join(ROOT_DIR, 'misc', 'jsons')
 
-COOKIES_FILE = os.path.join(ROOT_DIR, 'cookies.json')
+COOKIES_FILE = os.path.join(JSONS_DIR, 'cookies.json')
+TODOS_FILE = os.path.join(JSONS_DIR, 'todos.json')
+COURSE_FILE = os.path.join(JSONS_DIR, 'course.json')
 ACCOUNT_CONFIG_FILE = os.path.join(ROOT_DIR, 'account_config.json')
 TODO_DIR = os.path.join(ROOT_DIR, 'todo')
 COURSES_DIR = os.path.join(ROOT_DIR, 'Courses')

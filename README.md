@@ -4,7 +4,8 @@ Penn State University Canvas平台自动化系统，带完整PyQt6图形界面�
 
 ## 🎯 核心特性
 
-- **🖥️ 现代GUI**: PyQt6深色主题，启动器覆盖层，实时状态监控
+- **🖥️ 现代GUI**: PyQt6深色主题，模块化架构 (87%代码量减少)，浮动侧边栏
+- **🎨 平滑动画**: 侧边栏悬停展开 (70px→200px, 200ms动画)，实时状态监控
 - **🔐 智能登录**: Selenium自动化 + TOTP 2FA，24小时Cookie自动刷新
 - **🤖 AI驱动**: 支持Gemini和Claude双引擎，可选Thinking模式
 - **📚 作业自动化**: 分析要求 → 生成答案 → 转换DOCX → 自动提交
@@ -21,18 +22,24 @@ canvas_decon/
 ├── checkStatus.py          # 状态检查系统 (5个验证器)
 ├── clean.py                # 白名单垃圾清理
 │
-├── gui/                    # PyQt6 GUI系统
-│   ├── qt.py              # 主应用类 (CanvasApp, 1190行)
-│   ├── qt_interact.py     # 按钮回调 + 线程管理
-│   ├── styles.py          # Dark Next.js主题
-│   ├── delegates.py       # 自定义渲染 (TodoItemDelegate, FileItemDelegate)
-│   ├── data_manager.py    # JSON数据加载
-│   ├── done_manager.py    # 复选框状态持久化 (Done.txt)
-│   ├── course_detail_manager.py  # 课程详情管理
-│   ├── auto_detail_manager.py    # 自动化详情管理
-│   ├── formatters.py      # HTML格式化器
-│   ├── ios_toggle.py      # iOS风格开关组件
-│   ├── model_config.py    # AI模型配置
+├── gui/                    # PyQt6 GUI系统 (模块化架构)
+│   ├── qt.py              # 主应用类 (CanvasApp, 227行, 87%减少)
+│   ├── utilQtInteract.py  # 按钮回调 + 线程管理
+│   ├── cfgStyles.py       # Dark Next.js主题
+│   ├── rdrDelegates.py    # 自定义渲染 (TodoItemDelegate, FileItemDelegate)
+│   ├── mgrData.py         # JSON数据加载
+│   ├── mgrDone.py         # 复选框状态持久化 (Done.txt)
+│   ├── mgrCourseDetail.py # 课程详情管理
+│   ├── mgrAutoDetail.py   # 自动化详情管理
+│   ├── utilFormatters.py  # HTML格式化器
+│   ├── wgtIOSToggle.py    # iOS风格开关组件
+│   ├── wgtSidebar.py      # 浮动侧边栏 (70px→200px动画)
+│   ├── cfgModel.py        # AI模型配置
+│   ├── qt_utils/          # 模块化处理器
+│   │   ├── window_handlers/     # 7个窗口处理器
+│   │   ├── event_handlers/      # 键盘事件处理
+│   │   ├── content_processors/  # HTML/Tab加载/预览
+│   │   └── initializers/        # UI/Signal初始化器
 │   └── ui/                # Qt Designer UI文件 (6个窗口)
 │       ├── main.ui        # 主窗口
 │       ├── launcher.ui    # 启动器覆盖层
@@ -47,8 +54,9 @@ canvas_decon/
 │   ├── getHomework.py     # 作业自动化 (AI生成 + DOCX + 提交)
 │   ├── getQuiz_ultra.py   # 测验自动化 (视觉API + 自动提交)
 │   ├── getSyll.py         # 批量下载大纲
-│   ├── upPromptFiles.py   # 统一AI调用接口 (Gemini/Claude)
-│   └── history_manager.py # 历史TODO归档
+│   ├── utilPromptFiles.py # 统一AI调用接口 (Gemini/Claude)
+│   ├── utilModelSelector.py # AI模型列表获取
+│   └── mgrHistory.py      # 历史TODO归档
 │
 ├── login/                  # 认证模块
 │   ├── getCookie.py       # Selenium自动登录 (人类行为模拟)
@@ -68,12 +76,16 @@ canvas_decon/
 │           ├── input/     # 手动放置的输入文件
 │           └── output/    # 自动化生成的输出
 │
-├── account_config.json     # 账户配置 (Git忽略)
-├── cookies.json            # Session cookies (Git忽略)
-├── todos.json              # TODO缓存 (Git忽略)
-├── course.json             # 课程缓存 (Git忽略)
-├── his_todo.json           # 历史TODO (Git忽略)
-├── Done.txt                # 已完成标记 (Git忽略)
+├── misc/jsons/             # 运行时数据 (Git忽略)
+│   ├── cookies.json        # Session cookies
+│   ├── todos.json          # TODO缓存
+│   ├── course.json         # 课程缓存
+│   ├── his_todo.json       # 历史TODO归档
+│   ├── personal_info.json  # 个人信息
+│   ├── learn_preferences.json  # 学习偏好
+│   └── Done.txt            # 已完成标记
+│
+├── account_config.json     # 账户配置 (Git忽略, 保留在根目录)
 └── requirements.txt        # Python依赖
 ```
 
@@ -312,7 +324,7 @@ Main窗口 → Courses类别 → 双击课程 → CourseDetail窗口
 
 ## 🧠 AI调用系统
 
-### 统一接口 (func/upPromptFiles.py)
+### 统一接口 (func/utilPromptFiles.py)
 
 ```python
 call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False)

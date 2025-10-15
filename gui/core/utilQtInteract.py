@@ -208,15 +208,23 @@ def on_clean_clicked(tw):
 def on_back_clicked(sw, mw):
     sw.setCurrentWidget(mw)
 
-def on_submit_clicked(ai, pi, ki, sw, mw):
-    """Save account info - only update account/password/otp_key fields"""
+def on_submit_clicked(ai, pi, ki, sw, mw, manual_mode_toggle=None):
+    """Save account info - allows partial updates (any field can be updated independently)
+
+    Args:
+        manual_mode_toggle: IOSToggle for manual 2FA mode (optional)
+    """
     try:
         account = ai.text().strip()
         password = pi.text().strip()
         otp_key = ki.text().strip()
 
-        if not all([account, password, otp_key]):
-            return print("[ERROR] All fields required")
+        # Check manual mode
+        manual_mode = manual_mode_toggle.isChecked() if manual_mode_toggle else False
+
+        # Check if at least one field is provided
+        if not account and not password and not otp_key and not manual_mode:
+            return print("[ERROR] At least one field must be provided")
 
         # Load existing config to preserve other fields
         config_data = {}
@@ -224,17 +232,37 @@ def on_submit_clicked(ai, pi, ki, sw, mw):
             with open(config.ACCOUNT_CONFIG_FILE) as f:
                 config_data = json.load(f)
 
-        # Update only the three login fields
-        config_data['account'] = account
-        config_data['password'] = password
-        config_data['otp_key'] = otp_key
+        # Update fields (only if provided)
+        updated_fields = []
+
+        if account:
+            config_data['account'] = account
+            updated_fields.append('account')
+
+        if password:
+            config_data['password'] = password
+            updated_fields.append('password')
+
+        if otp_key:
+            config_data['otp_key'] = otp_key
+            updated_fields.append('otp_key')
+        elif manual_mode:
+            # Manual mode enabled without TOTP key
+            config_data['otp_key'] = "loginself"
+            updated_fields.append('otp_key (manual mode)')
+            print("[INFO] Manual 2FA mode enabled - you'll complete 2FA manually")
 
         # Save back
         with open(config.ACCOUNT_CONFIG_FILE, 'w') as f:
             json.dump(config_data, f, indent=2)
 
-        print(f"[SUCCESS] Login credentials saved to {config.ACCOUNT_CONFIG_FILE}")
-        for f in (ai, pi, ki): f.clear()
+        print(f"[SUCCESS] Updated: {', '.join(updated_fields)}")
+
+        # Clear only the fields that were filled
+        if account: ai.clear()
+        if password: pi.clear()
+        if otp_key: ki.clear()
+
         sw.setCurrentWidget(mw)
     except Exception as e:
         print(f"[ERROR] Save failed: {e}")

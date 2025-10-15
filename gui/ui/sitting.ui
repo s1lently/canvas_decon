@@ -175,6 +175,63 @@
              </widget>
             </item>
             <item>
+             <widget class="QWidget" name="manualModeContainer">
+              <property name="minimumWidth">
+               <number>400</number>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+              <layout class="QHBoxLayout" name="manualModeLayout">
+               <property name="spacing">
+                <number>10</number>
+               </property>
+               <item>
+                <widget class="QLabel" name="manualModeLabel">
+                 <property name="text">
+                  <string>No TOTP Key? Enable Manual 2FA Mode:</string>
+                 </property>
+                 <property name="styleSheet">
+                  <string>font-size: 13px; color: #aaa;</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QWidget" name="manualModeTogglePlaceholder">
+                 <property name="minimumSize">
+                  <size>
+                   <width>50</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="manualModeHintLabel">
+              <property name="text">
+               <string>When enabled, you'll manually complete 2FA after entering credentials</string>
+              </property>
+              <property name="styleSheet">
+               <string>font-size: 11px; color: #666; font-style: italic;</string>
+              </property>
+              <property name="alignment">
+               <set>Qt::AlignCenter</set>
+              </property>
+              <property name="wordWrap">
+               <bool>true</bool>
+              </property>
+              <property name="minimumWidth">
+               <number>400</number>
+              </property>
+              <property name="maximumWidth">
+               <number>400</number>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QPushButton" name="submitBtn">
               <property name="text">
                <string>Submit</string>

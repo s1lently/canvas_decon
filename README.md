@@ -114,6 +114,12 @@ pip install -r requirements.txt
 
 **获取TOTP密钥**: 在设置2FA时，扫描二维码前查看"手动输入密钥"，复制Base32字符串。
 
+**无法获取TOTP密钥?** 使用**手动2FA模式**：
+1. Settings → Login标签 → 启用"Manual 2FA Mode"开关
+2. 留空TOTP Key输入框 → Submit保存（会自动保存为`"otp_key": "loginself"`）
+3. Get Cookie时会弹出浏览器，手动完成2FA验证
+4. 脚本等待5分钟直到检测到Canvas仪表盘
+
 ### 3. 启动GUI
 
 ```bash

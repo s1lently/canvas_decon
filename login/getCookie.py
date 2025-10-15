@@ -41,56 +41,78 @@ def get_cookies(account, password, otp_key):
         human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='password']"))), password)
         human_click(driver, driver.find_element(By.CSS_SELECTOR, "input[type='submit']"))
 
-        start_time = time.time()
-        while time.time() - start_time < 30:
-            if "I can't use my Microsoft Authenticator" in driver.page_source:
-                human_click(driver, driver.find_element(By.PARTIAL_LINK_TEXT, "I can't use my Microsoft Authenticator"))
-                human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
-                break
-            elif "Use a verification code" in driver.page_source:
-                human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
-                break
-            elif "Sorry, but we’re having trouble signing you in" in driver.page_source:
-                time.sleep(1)
-                continue
-            else:
-                time.sleep(0.5)
-        else:
-            raise Exception("2FA page timed out.")
-        
-        sso_success = False
-        for attempt in range(3):
-            token = getTotp.generate_token(otp_key) # Pass the key string directly
-            if not token:
-                time.sleep(5)
-                continue
+        # Check if manual 2FA mode (otp_key == "loginself")
+        manual_mode = (otp_key == "loginself")
+
+        if manual_mode:
+            # Manual 2FA mode: User completes 2FA themselves
+            print("\n" + "="*80)
+            print("MANUAL 2FA MODE ENABLED")
+            print("="*80)
+            print("Please complete the 2FA verification in the browser window.")
+            print("The script will wait for you to reach the Canvas dashboard...")
+            print("="*80 + "\n")
+
+            # Wait for user to complete 2FA and reach dashboard (up to 5 minutes)
             try:
-                human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='tel']"))), token)
-            except TimeoutException:
-                 driver.back()
-                 time.sleep(1)
-                 continue
-            human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[@id='idSubmit_SAOTCC_Continue']"))))
-            try:
-                WebDriverWait(driver, 20).until(EC.any_of(
-                    EC.presence_of_element_located((By.ID, "dashboard")),
-                    EC.presence_of_element_located((By.ID, "idBtn_Back"))
-                ))
-                if len(driver.find_elements(By.ID, "idBtn_Back")) > 0:
-                    human_click(driver, driver.find_element(By.ID, "idBtn_Back"))
-                wait.until(EC.presence_of_element_located((By.ID, "dashboard")))
+                wait_long = WebDriverWait(driver, 300)  # 5 minutes timeout
+                wait_long.until(EC.presence_of_element_located((By.ID, "dashboard")))
+                print("[SUCCESS] Login completed! Dashboard detected.")
                 sso_success = True
-                break
             except TimeoutException:
-                if "Sorry, but we’re having trouble signing you in" not in driver.page_source and attempt < 2:
-                    raise Exception("SSO failed with an unexpected error.")
-                driver.back()
-                time.sleep(1)
-                driver.back()
-                time.sleep(1)
-                human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
-        if not sso_success:
-            raise Exception("SSO submission failed after 3 retries.")
+                raise Exception("Timed out waiting for manual 2FA completion (5 minutes)")
+        else:
+            # Automatic 2FA mode with TOTP
+            start_time = time.time()
+            while time.time() - start_time < 30:
+                if "I can't use my Microsoft Authenticator" in driver.page_source:
+                    human_click(driver, driver.find_element(By.PARTIAL_LINK_TEXT, "I can't use my Microsoft Authenticator"))
+                    human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
+                    break
+                elif "Use a verification code" in driver.page_source:
+                    human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
+                    break
+                elif "Sorry, but we're having trouble signing you in" in driver.page_source:
+                    time.sleep(1)
+                    continue
+                else:
+                    time.sleep(0.5)
+            else:
+                raise Exception("2FA page timed out.")
+
+            sso_success = False
+            for attempt in range(3):
+                token = getTotp.generate_token(otp_key) # Pass the key string directly
+                if not token:
+                    time.sleep(5)
+                    continue
+                try:
+                    human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='tel']"))), token)
+                except TimeoutException:
+                     driver.back()
+                     time.sleep(1)
+                     continue
+                human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[@id='idSubmit_SAOTCC_Continue']"))))
+                try:
+                    WebDriverWait(driver, 20).until(EC.any_of(
+                        EC.presence_of_element_located((By.ID, "dashboard")),
+                        EC.presence_of_element_located((By.ID, "idBtn_Back"))
+                    ))
+                    if len(driver.find_elements(By.ID, "idBtn_Back")) > 0:
+                        human_click(driver, driver.find_element(By.ID, "idBtn_Back"))
+                    wait.until(EC.presence_of_element_located((By.ID, "dashboard")))
+                    sso_success = True
+                    break
+                except TimeoutException:
+                    if "Sorry, but we're having trouble signing you in" not in driver.page_source and attempt < 2:
+                        raise Exception("SSO failed with an unexpected error.")
+                    driver.back()
+                    time.sleep(1)
+                    driver.back()
+                    time.sleep(1)
+                    human_click(driver, wait.until(EC.element_to_be_clickable((By.XPATH, "//*[contains(text(), 'Use a verification code')]"))))
+            if not sso_success:
+                raise Exception("SSO submission failed after 3 retries.")
         
         cookies = driver.get_cookies()
         return cookies
@@ -123,7 +145,10 @@ def main():
         print("Error: Missing required fields in account_info.json (account, password, otp_key)")
         return
 
-    print(f"Logging in with account: {account}")
+    if otp_key == "loginself":
+        print(f"Logging in with account: {account} (Manual 2FA mode)")
+    else:
+        print(f"Logging in with account: {account}")
 
     # Get cookies
     cookies = get_cookies(account, password, otp_key)

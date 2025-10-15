@@ -87,6 +87,16 @@ class UIInitializer:
         placeholder.deleteLater()
         layout.insertWidget(idx, app.thinking_toggle)
 
+        # Manual 2FA mode toggle (for Sitting)
+        app.manual_mode_toggle = IOSToggle(width=50, height=24)
+        app.manual_mode_toggle.setChecked(False)
+        placeholder = app.sitting_window.manualModeTogglePlaceholder
+        layout = placeholder.parent().layout()
+        idx = layout.indexOf(placeholder)
+        layout.removeWidget(placeholder)
+        placeholder.deleteLater()
+        layout.insertWidget(idx, app.manual_mode_toggle)
+
         # Hide old action buttons (replaced by sidebar)
         old_buttons = ['getCookieBtn', 'getTodoBtn', 'getCourseBtn', 'gSyllAllBtn',
                        'cleanBtn', 'automationTopBtn', 'sittingBtn']

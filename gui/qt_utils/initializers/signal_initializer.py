@@ -44,7 +44,7 @@ class SignalInitializer:
         # === SITTING WINDOW ===
         sw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
         sw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(
-            sw.accountInput, sw.passwordInput, sw.keyInput, app.stacked_widget, mw
+            sw.accountInput, sw.passwordInput, sw.keyInput, app.stacked_widget, mw, app.manual_mode_toggle
         ))
         sw.saveApiBtn.clicked.connect(app.sitting_handler.save_api_key)
         sw.savePrefBtn.clicked.connect(lambda: app.sitting_handler.save_preference(sw.baseUrlInput.text()))
@@ -66,6 +66,16 @@ class SignalInitializer:
         sw.refreshTasksBtn.clicked.connect(app.sitting_handler.refresh_tasks_table)
         sw.stopTaskBtn.clicked.connect(app.sitting_handler.stop_selected_task)
         sw.stopAllTasksBtn.clicked.connect(app.sitting_handler.stop_all_tasks)
+
+        # Manual 2FA mode toggle - disable TOTP key input when enabled
+        def on_manual_mode_changed(state):
+            is_manual = (state == 2)  # Qt.CheckState.Checked
+            sw.keyInput.setEnabled(not is_manual)
+            if is_manual:
+                sw.keyInput.setPlaceholderText("TOTP Key (Disabled in Manual Mode)")
+            else:
+                sw.keyInput.setPlaceholderText("TOTP Key")
+        app.manual_mode_toggle.stateChanged.connect(on_manual_mode_changed)
 
         # === AUTOMATION WINDOW ===
         aw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))

@@ -72,6 +72,7 @@ main.py → CanvasApp.__init__()
 
 ### Authentication Flow
 
+**Automatic Mode** (with TOTP key):
 ```
 User: Click "Get Cookie"
 └─> qt_interact.on_get_cookie_clicked()
@@ -84,6 +85,26 @@ User: Click "Get Cookie"
         │   ├─> Wait for 2FA page (30s timeout)
         │   ├─> [3 retries] TOTP verification
         │   │   └─> getTotp.generate_token(otp_key) → pyotp.TOTP(key).now()
+        │   └─> driver.get_cookies()
+        └─> Save to cookies.json (24h validity)
+```
+
+**Manual 2FA Mode** (for users without TOTP key):
+```
+User: Enable "Manual 2FA Mode" toggle in Settings → Save with empty TOTP key
+    → otp_key saved as "loginself" in account_config.json
+
+User: Click "Get Cookie"
+└─> qt_interact.on_get_cookie_clicked()
+    └─> [Thread] login/getCookie.py:main()
+        ├─> get_cookies(account, password, "loginself")
+        │   ├─> Selenium WebDriver (Chrome)
+        │   ├─> Navigate to https://psu.instructure.com/login
+        │   ├─> human_type(account) + Submit
+        │   ├─> human_type(password) + Submit
+        │   ├─> Print: "MANUAL 2FA MODE - Complete 2FA in browser"
+        │   ├─> Wait for user to manually complete 2FA (5min timeout)
+        │   ├─> Wait for dashboard detection
         │   └─> driver.get_cookies()
         └─> Save to cookies.json (24h validity)
 ```

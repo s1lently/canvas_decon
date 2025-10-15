@@ -362,8 +362,7 @@ class LearnSittingWidget(QWidget):
 
     def on_decon_textbook(self):
         """Decon textbook (call existing handler)"""
-        from gui.core import utilQtInteract as qt_interact
-        qt_interact.on_decon_textbook_clicked(self.canvas_app)
+        self.canvas_app.course_detail_handler.on_decon_textbook_clicked()
 
     def on_load_from_decon(self):
         """Load from decon (call existing handler)"""

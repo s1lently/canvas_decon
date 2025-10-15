@@ -156,6 +156,20 @@ class SignalInitializer:
 
         app.history_toggle.stateChanged.connect(app.main_handler.on_history_toggle_clicked)
 
+        # === SIDEBAR NAVIGATION ===
+        def navigate_to(page_id):
+            """Handle sidebar navigation"""
+            navigation_map = {
+                'launch': lambda: app.launcher_handler.show(),
+                'main': lambda: app.stacked_widget.setCurrentWidget(mw),
+                'auto': lambda: app.automation_handler.open_top(),
+                'sitting': lambda: app.stacked_widget.setCurrentWidget(sw)
+            }
+            if page_id in navigation_map:
+                navigation_map[page_id]()
+
+        app.sidebar.navigate.connect(navigate_to)
+
         # === INITIAL STATE ===
         # Load login info and API settings
         app.sitting_handler.load_current_login_info()

@@ -1,10 +1,11 @@
 """UI Initializer - Handles all UI initialization"""
 import sys, os
-from PyQt6.QtWidgets import QStackedWidget, QLabel
+from PyQt6.QtWidgets import QStackedWidget, QLabel, QWidget, QHBoxLayout
 from PyQt6.QtCore import Qt
 from PyQt6.uic import loadUi
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from gui.wgtIOSToggle import IOSToggle
+from gui.wgtSidebar import GlobalSidebar
 from gui import rdrDelegates as delegates
 
 
@@ -14,7 +15,7 @@ class UIInitializer:
     @staticmethod
     def init_qt(app):
         """Initialize Qt UI: Load 6 windows + create widgets"""
-        # Create stacked widget
+        # Create stacked widget (full width, no sidebar in layout)
         app.stacked_widget = QStackedWidget()
         app.setCentralWidget(app.stacked_widget)
 
@@ -87,11 +88,21 @@ class UIInitializer:
         placeholder.deleteLater()
         layout.insertWidget(idx, app.thinking_toggle)
 
+        # Hide old action buttons (replaced by sidebar)
+        old_buttons = ['getCookieBtn', 'getTodoBtn', 'getCourseBtn', 'gSyllAllBtn',
+                       'cleanBtn', 'automationTopBtn', 'sittingBtn']
+        for btn_name in old_buttons:
+            if hasattr(app.main_window, btn_name):
+                getattr(app.main_window, btn_name).setVisible(False)
+
         # Set current widget
         app.stacked_widget.setCurrentWidget(app.main_window)
 
         # Init launcher overlay
         UIInitializer._init_launcher_overlay(app)
+
+        # Init floating sidebar
+        UIInitializer._init_sidebar(app)
 
     @staticmethod
     def _init_launcher_overlay(app):
@@ -108,6 +119,35 @@ class UIInitializer:
         app.main_window.installEventFilter(app)
         app.launcher_overlay.todoList.installEventFilter(app)
         app.launcher_overlay.courseList.installEventFilter(app)
+
+    @staticmethod
+    def _init_sidebar(app):
+        """Initialize floating sidebar (overlays on top, doesn't occupy space)"""
+        from PyQt6.QtCore import Qt as QtCore
+
+        # Create floating sidebar
+        app.sidebar = GlobalSidebar(app, parent=app)
+        app.sidebar.setAttribute(QtCore.WidgetAttribute.WA_StyledBackground, True)
+
+        # Position at top-right corner
+        app.sidebar.raise_()  # Bring to front
+        UIInitializer._position_sidebar(app)
+
+    @staticmethod
+    def _position_sidebar(app):
+        """Position sidebar at right edge"""
+        # Get window size
+        window_width = app.width()
+        window_height = app.height()
+
+        # Get current sidebar width (might be animating)
+        current_width = app.sidebar.width()
+        if current_width == 0:  # First time positioning
+            current_width = app.sidebar.collapsed_width
+
+        # Position at top-right, don't force width (let animation control it)
+        app.sidebar.move(window_width - current_width, 0)
+        app.sidebar.setFixedHeight(window_height)
 
     @staticmethod
     def init_data_viewer(app):

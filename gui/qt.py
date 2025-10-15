@@ -114,8 +114,12 @@ class CanvasApp(QMainWindow):
 
         # === WINDOW PROPERTIES ===
         self.setWindowTitle("Canvas LMS Automation")
-        self.resize(1400, 800)
+        self.resize(1600, 900)  # Increased resolution for better visibility
         self.installEventFilter(self)
+
+        # Position sidebar after window resize
+        if hasattr(self, 'sidebar'):
+            UIInitializer._position_sidebar(self)
 
     # === STATUS & UPDATES ===
     def check_status(self):
@@ -210,6 +214,13 @@ class CanvasApp(QMainWindow):
 
         # Delegate all other events to keyboard handler
         return self.keyboard_handler.handle_event(obj, event)
+
+    def resizeEvent(self, event):
+        """Handle window resize - reposition floating sidebar"""
+        super().resizeEvent(event)
+        if hasattr(self, 'sidebar'):
+            from gui.qt_utils.initializers.ui_initializer import UIInitializer
+            UIInitializer._position_sidebar(self)
 
 
 # === APPLICATION ENTRY POINT ===

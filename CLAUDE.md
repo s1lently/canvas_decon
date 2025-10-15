@@ -19,49 +19,56 @@ This file provides essential guidance for Claude Code and other AI assistants wh
 
 ### Key Technologies
 
-- **GUI**: PyQt6 (6 windows, 10 modules, ~2500 lines)
+- **GUI**: PyQt6 (6 windows, modular handlers, qt.py: 227 lines)
 - **Backend**: Python 3.10+
 - **Auth**: Selenium + TOTP (pyotp)
-- **AI**: Gemini API + Claude API (unified interface)
-- **Web**: requests, lxml, BeautifulSoup4
-- **Document**: python-docx, Pillow, markdown
+- **AI**: Gemini + Claude (unified via utilPromptFiles)
+- **Web**: requests, lxml
 
-### High-Level Architecture
+### High-Level Architecture (Post-Refactor)
 
 ```
-main.py → gui/qt.py (CanvasApp)
-    ├─> 6 Windows: Main, Launcher, Sitting, Automation, CourseDetail, AutoDetail
-    ├─> 4 Managers: DataManager, DoneManager, CourseDetailManager, AutoDetailManager
-    └─> Modules:
-        ├─> login/ (getCookie.py, getTotp.py)
-        ├─> func/ (getTodos.py, getHomework.py, getQuiz_ultra.py, upPromptFiles.py)
-        └─> checkStatus.py (5 validators)
+main.py → gui/qt.py (CanvasApp - 227 lines, 87% reduction)
+    ├─> 6 Windows + Floating Sidebar
+    ├─> qt_utils/ (Modular Architecture)
+    │   ├─> window_handlers/ (7 handlers: Main, Launcher, Auto, etc.)
+    │   ├─> event_handlers/ (Keyboard)
+    │   ├─> content_processors/ (HTML, TabLoader, Preview)
+    │   └─> initializers/ (UI, Signal)
+    ├─> Managers (mgr prefix): mgrData, mgrDone, mgrCourseDetail, mgrAutoDetail
+    ├─> func/ (get/proc/util prefix): getTodos, getHomework, getQuiz_ultra, utilPromptFiles
+    └─> misc/jsons/ (cookies.json, todos.json, course.json, his_todo.json)
 ```
 
 ---
 
 ## Architecture & Dependency Flow
 
-### Startup Flow
+### Startup Flow (Modular)
 
 ```
-main.py:main()
-└─> CanvasApp.__init__()
-    ├─> init_qt() - Load 6 UI files + setup widgets
-    ├─> init_button_bindings() - Connect all signals
-    ├─> init_data_viewer() - Load data + show launcher
-    │   └─> history_manager.archive_past_todos()
-    ├─> check_status() - Initial validation + auto-fix
-    │   └─> checkStatus.get_all_status()
-    │       ├─> check_account_info()
-    │       ├─> check_cookie_validity()
-    │       ├─> check_todo_list()
-    │       ├─> check_network()
-    │       └─> check_course_list()
-    └─> [Daemon Threads]
-        ├─> status_update_thread (every 30s)
-        └─> archive_thread (every 5min)
+main.py → CanvasApp.__init__()
+├─> UIInitializer.init_qt() - Load 6 windows + floating sidebar
+├─> SignalInitializer.init_button_bindings() - Connect all signals
+├─> UIInitializer.init_data_viewer() - Load data + show launcher
+├─> check_status() - Run 5 validators (account, cookie, todos, network, courses)
+└─> Window: 1600x900, Sidebar: 70px collapsed → 200px on hover
 ```
+
+### Naming Convention (Standardized)
+
+**GUI Files** (`gui/`):
+- `mgr*.py` - Managers (mgrData, mgrDone, mgrTask)
+- `rdr*.py` - Renderers (rdrDelegates, rdrToast)
+- `wgt*.py` - Widgets (wgtSidebar, wgtIOSToggle)
+- `util*.py` - Utilities (utilQtInteract, utilFormatters)
+- `cfg*.py` - Config (cfgModel, cfgStyles, cfgLearnPrefs)
+
+**Func Files** (`func/`):
+- `get*.py` - Fetch data (getTodos, getCourses, getHomework)
+- `proc*.py` - Process data (procLearnMaterial)
+- `util*.py` - Utilities (utilPromptFiles, utilModelSelector)
+- `mgr*.py` - Managers (mgrHistory)
 
 ### Authentication Flow
 
@@ -181,40 +188,36 @@ User: Submit
 
 ## Core Modules
 
-### gui/qt.py - Main Application (1190 lines)
+### gui/qt.py - Lightweight Router (227 lines, 87% reduction)
 
-**CanvasApp** - Central GUI controller
+**CanvasApp** - Delegates all business logic to handlers
 
 ```python
 class CanvasApp(QMainWindow):
     def __init__(self):
-        # Managers
-        self.dm = DataManager()              # JSON data loading
-        self.done_mgr = DoneManager()        # Checkbox state (Done.txt)
-        self.course_detail_mgr = None        # Lazy init
-        self.auto_detail_mgr = None          # Lazy init
+        # Data Managers
+        self.dm, self.done_mgr = DataManager(), DoneManager()
 
-        # Signals (thread-safe communication)
-        self.status_signal = StatusUpdateSignal()
-        self.tab_content_signal = TabContentSignal()
-        self.auto_detail_signal = AutoDetailSignal()
+        # 7 Window Handlers (all logic delegated)
+        self.launcher_handler = LauncherHandler(self)
+        self.main_handler = MainWindowHandler(self)
+        self.automation_handler = AutomationWindowHandler(self)
+        self.course_detail_handler = CourseDetailWindowHandler(self)
+        self.auto_detail_handler = AutoDetailWindowHandler(self)
+        self.sitting_handler = SittingWindowHandler(self)
+        self.keyboard_handler = KeyboardHandler(self)
 
-        # Initialize
-        self.init_qt()                    # Load 6 UI files
-        self.init_button_bindings()       # Connect signals/slots
-        self.init_data_viewer()           # Load data + show launcher
-        self.check_status()               # Initial check + auto-fix
-
-        # Event filters (keyboard navigation)
-        self.installEventFilter(self)
-        self._install_list_event_filters()
+        # Initialize (now in separate initializers)
+        UIInitializer.init_qt(self)           # Load 6 UI + sidebar
+        SignalInitializer.init_button_bindings(self)  # Connect signals
+        UIInitializer.init_data_viewer(self)  # Load data
 ```
 
-**Key Methods**:
-- `init_qt()` (42-70): Load UI files, create IOSToggle widgets
-- `init_button_bindings()` (222-288): Connect all buttons
-- `check_status()` (289-305): Run validators + auto-fix
-- `eventFilter()` (992-1089): WASD navigation + shortcuts
+**Sidebar Widget** (`wgtSidebar.py`):
+- Floating right-side overlay (doesn't occupy space)
+- Smooth animation: 70px → 200px on hover (200ms OutCubic)
+- Auto-repositions during window resize
+- Extensible: `update_tools(actions)` for per-page tools
 
 ### gui/qt_interact.py - Button Handlers
 

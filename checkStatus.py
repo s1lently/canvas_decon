@@ -23,8 +23,9 @@ def check_account_info():
     if data is None:
         return 0
 
-    required_keys = {'account', 'password', 'otp_key'}
-    if set(data.keys()) == required_keys and all(isinstance(v, str) and v for v in data.values()):
+    # Check if required keys exist (allow extra keys like API keys)
+    required_keys = ['account', 'password', 'otp_key']
+    if all(k in data and isinstance(data[k], str) and data[k] for k in required_keys):
         return 1
 
     return 2
@@ -77,15 +78,16 @@ def check_todo_list():
 def check_network():
     """Check if network access to Canvas API works"""
     try:
-        resp = requests.get('https://psu.instructure.com/api/v1/users/self', timeout=5)
-        return 1 if resp.status_code in [200, 401, 403] else 2
+        # Just check if Canvas homepage is reachable (network connectivity test)
+        resp = requests.get('https://psu.instructure.com', timeout=5)
+        return 1 if resp.status_code == 200 else 2
     except requests.RequestException:
         return 0
 
 
 def check_course_list():
     """Check if course.json exists and is valid"""
-    return _check_json_data_file(os.path.join(os.path.dirname(__file__), 'course.json'))
+    return _check_json_data_file(config.COURSE_FILE)
 
 
 def get_all_status():

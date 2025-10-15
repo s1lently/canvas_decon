@@ -3,7 +3,7 @@ Canvas LMS Automation - Lightweight Qt Router (Refactored)
 Original: 1824 lines → New: ~250 lines (86% reduction)
 All business logic moved to qt_utils/ handlers
 """
-import sys, os, threading
+import sys, os, threading, subprocess, platform
 from datetime import datetime, timedelta
 from PyQt6.QtWidgets import QMainWindow
 from PyQt6.QtCore import pyqtSignal, QObject, QEvent
@@ -203,6 +203,16 @@ class CanvasApp(QMainWindow):
     def _refresh_current_category(self):
         """Refresh current category in CourseDetail"""
         self.course_detail_handler.refresh_current_category()
+
+    # === UTILITY METHODS ===
+    def _open_folder(self, path):
+        """Open folder in system file manager (cross-platform)"""
+        if path and os.path.exists(path):
+            {
+                'Windows': lambda: os.startfile(path),
+                'Darwin': lambda: subprocess.run(['open', path]),
+                'Linux': lambda: subprocess.run(['xdg-open', path])
+            }.get(platform.system(), lambda: None)()
 
     # === EVENT HANDLING ===
     def eventFilter(self, obj, event):

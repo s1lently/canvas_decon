@@ -26,10 +26,21 @@ class DropListWidget(QListWidget):
         self.setAcceptDrops(True)
         self.setDragEnabled(False)
         self.setDragDropMode(QAbstractItemView.DragDropMode.DropOnly)
+        # Enable drops on viewport as well
+        self.viewport().setAcceptDrops(True)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        """Also need to handle drag move to show the drop cursor"""
+        if event.mimeData().hasUrls():
+            event.acceptProposedAction()
+        else:
+            event.ignore()
 
     def dropEvent(self, event):
         if event.mimeData().hasUrls():
@@ -46,6 +57,8 @@ class DropListWidget(QListWidget):
                         print(f"[DRAG-DROP] Error copying {filename}: {e}")
             event.acceptProposedAction()
             self.refresh_callback()
+        else:
+            event.ignore()
 
 
 class LearnSittingWidget(QWidget):

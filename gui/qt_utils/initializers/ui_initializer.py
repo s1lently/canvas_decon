@@ -9,6 +9,16 @@ from gui.widgets.wgtSidebar import GlobalSidebar
 from gui.widgets import rdrDelegates as delegates
 
 
+def get_resource_path(relative_path):
+    """Get absolute path to resource, works for dev and PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
 class UIInitializer:
     """Handles UI initialization for CanvasApp"""
 
@@ -19,14 +29,13 @@ class UIInitializer:
         app.stacked_widget = QStackedWidget()
         app.setCentralWidget(app.stacked_widget)
 
-        # Load UI files
-        ui_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'ui')
-        app.main_window = loadUi(os.path.join(ui_dir, 'main.ui'))
-        app.sitting_window = loadUi(os.path.join(ui_dir, 'sitting.ui'))
-        app.automation_window = loadUi(os.path.join(ui_dir, 'automation.ui'))
-        app.course_detail_window = loadUi(os.path.join(ui_dir, 'course_detail.ui'))
-        app.auto_detail_window = loadUi(os.path.join(ui_dir, 'autoDetail.ui'))
-        app.launcher_overlay = loadUi(os.path.join(ui_dir, 'launcher.ui'))
+        # Load UI files (support both dev and PyInstaller)
+        app.main_window = loadUi(get_resource_path('gui/ui/main.ui'))
+        app.sitting_window = loadUi(get_resource_path('gui/ui/sitting.ui'))
+        app.automation_window = loadUi(get_resource_path('gui/ui/automation.ui'))
+        app.course_detail_window = loadUi(get_resource_path('gui/ui/course_detail.ui'))
+        app.auto_detail_window = loadUi(get_resource_path('gui/ui/autoDetail.ui'))
+        app.launcher_overlay = loadUi(get_resource_path('gui/ui/launcher.ui'))
 
         # Add windows to stacked widget
         for w in [app.main_window, app.sitting_window, app.automation_window,

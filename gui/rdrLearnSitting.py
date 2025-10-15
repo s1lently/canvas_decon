@@ -10,7 +10,7 @@ from PyQt6.QtGui import QFont
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
-from gui.learn_preferences import (load_preferences, save_preferences,
+from gui.cfgLearnPrefs import (load_preferences, save_preferences,
                                     get_available_products, get_available_models,
                                     get_resolved_product_model, set_product, set_model)
 
@@ -355,12 +355,12 @@ class LearnSittingWidget(QWidget):
 
     def on_decon_textbook(self):
         """Decon textbook (call existing handler)"""
-        from gui import qt_interact
+        from gui import utilQtInteract as qt_interact
         qt_interact.on_decon_textbook_clicked(self.canvas_app)
 
     def on_load_from_decon(self):
         """Load from decon (call existing handler)"""
-        from gui import qt_interact
+        from gui import utilQtInteract as qt_interact
         qt_interact.on_load_from_decon_clicked(self.canvas_app)
         # Refresh lists after load
         self.refresh_learn_list()
@@ -412,7 +412,7 @@ class LearnSittingWidget(QWidget):
             return
 
         # Create single console
-        from gui.qt_interact import _create_console_tab
+        from gui.utilQtInteract import _create_console_tab
         console = _create_console_tab(self.canvas_app.main_window.consoleTabWidget, "Batch Learn")
 
         def run_batch():
@@ -467,7 +467,7 @@ class LearnSittingWidget(QWidget):
             console.append("=" * 80)
 
             # Show notification
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             if failed_files:
                 show_toast(
                     self.canvas_app,
@@ -519,10 +519,10 @@ class LearnSittingWidget(QWidget):
         # Show toast notification
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}\n当前模型: {resolved_model}", 'success', 3000)
         except Exception as e:
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}", 'success', 3000)
 
     def on_pref_model_changed(self, model):
@@ -544,13 +544,13 @@ class LearnSittingWidget(QWidget):
         # Show toast notification
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             if model == 'Auto':
                 show_toast(self.canvas_app, f"Model 设为 Auto\n实际使用: {resolved_model}", 'success', 3000)
             else:
                 show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
         except Exception as e:
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
 
     def update_current_model_display(self):
@@ -619,10 +619,10 @@ class LearnSittingWidget(QWidget):
         # Show toast
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}\n当前模型: {resolved_model}", 'success', 3000)
         except:
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Product 已更改为 {product}", 'success', 3000)
 
     def on_adv_model_changed(self, model):
@@ -642,13 +642,13 @@ class LearnSittingWidget(QWidget):
         # Show toast
         try:
             resolved_product, resolved_model = get_resolved_product_model()
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             if model == 'Auto':
                 show_toast(self.canvas_app, f"Model 设为 Auto\n实际使用: {resolved_model}", 'success', 3000)
             else:
                 show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
         except:
-            from gui.toast_notification import show_toast
+            from gui.rdrToast import show_toast
             show_toast(self.canvas_app, f"Model 已更改为 {model}", 'success', 3000)
 
     def update_available_models_list(self):
@@ -669,7 +669,7 @@ class LearnSittingWidget(QWidget):
             return
 
         try:
-            from learn_preferences import refresh_available_models
+            from cfgLearnPrefs import refresh_available_models
 
             # Show loading message
             self.available_models_list.setPlainText("⏳ Fetching from API...")
@@ -729,7 +729,7 @@ class LearnSittingWidget(QWidget):
             'csv': DEFAULT_CSV_PROMPT
         }
 
-        from learn_preferences import set_prompt
+        from cfgLearnPrefs import set_prompt
         if prompt_text != defaults[prompt_type]:
             set_prompt(prompt_type, prompt_text)
         else:
@@ -738,7 +738,7 @@ class LearnSittingWidget(QWidget):
         # Update Tab 2
         self.update_prompt_preview()
 
-        from gui.toast_notification import show_toast
+        from gui.rdrToast import show_toast
         show_toast(self.canvas_app, f"Prompt 模板已保存 ({prompt_type})", 'success', 3000)
 
     def on_reset_prompt_type(self):

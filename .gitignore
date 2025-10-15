@@ -70,3 +70,7 @@ test_*.py
 
 # JSON data (runtime)
 json_*.json
+learn_preferences.json
+
+# Output files
+output/

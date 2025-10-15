@@ -33,7 +33,7 @@ def _create_console_tab(tw, name, with_progress=False):
         tuple (ThreadSafeConsole, progress_widget) if with_progress=True
     """
     if with_progress:
-        from gui.progress_widget import create_console_with_progress
+        from gui.wgtProgress import create_console_with_progress
         console_widget, progress_widget = create_console_with_progress(tw, name)
         return ThreadSafeConsole(console_widget), progress_widget
     else:
@@ -57,7 +57,7 @@ def _run_in_thread(func, console, name, on_success=None, task_id=None):
         on_success: Callback on success
         task_id: Unique task ID (defaults to thread name)
     """
-    from gui.task_manager import get_task_manager
+    from gui.mgrTask import get_task_manager
 
     console.append(f"[INFO] {name} started")
 

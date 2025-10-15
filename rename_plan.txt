@@ -1,0 +1,42 @@
+# GUI文件重命名计划 (3字母前缀规范)
+
+## 类型前缀规范
+# mgr  - Manager 管理器
+# rdr  - Renderer 渲染器/UI组件
+# wgt  - Widget 组件  
+# util - Utility 工具类
+# cfg  - Config 配置类
+
+## Managers (5个)
+gui/auto_detail_manager.py      → gui/mgrAutoDetail.py
+gui/course_detail_manager.py    → gui/mgrCourseDetail.py
+gui/data_manager.py              → gui/mgrData.py
+gui/done_manager.py              → gui/mgrDone.py
+gui/task_manager.py              → gui/mgrTask.py
+
+## Renderers (3个)
+gui/delegates.py                 → gui/rdrDelegates.py
+gui/learn_sitting_renderer.py   → gui/rdrLearnSitting.py
+gui/toast_notification.py       → gui/rdrToast.py
+
+## Widgets (2个)
+gui/ios_toggle.py                → gui/wgtIOSToggle.py
+gui/progress_widget.py           → gui/wgtProgress.py
+
+## Utils (2个)
+gui/formatters.py                → gui/utilFormatters.py
+gui/qt_interact.py               → gui/utilQtInteract.py
+
+## Config (3个)
+gui/learn_preferences.py         → gui/cfgLearnPrefs.py
+gui/model_config.py              → gui/cfgModel.py
+gui/styles.py                    → gui/cfgStyles.py
+
+## 保持不变 (2个)
+gui/qt.py                        → gui/qt.py
+gui/__init__.py                  → gui/__init__.py
+
+## 废弃文件移动 (1个)
+gui/qt_old_backup.py             → misc/old/gui/qt_v1_monolithic_1824lines.py
+
+总计: 15个重命名 + 1个移动 = 16个操作

@@ -149,47 +149,28 @@ def fetch_page(session, page, per_page):
     return []
 
 def get_history_todos(session):
-    """Get all graded/completed assignments - Concurrent Version"""
+    """Get recent graded/completed assignments (Max 5 pages / 500 items)"""
     start_total = time.time()
-    print("Fetching graded submissions (Concurrent Mode)...")
+    print("Fetching recent graded submissions (Max 5 pages)...")
 
-    # Step 1: Detect pages
     per_page = 100
-    total_pages = get_total_pages(session, per_page)
-    
-    # If detection failed (returns 1) but we might have more, try fetching p1 to see links
-    if total_pages == 1:
-        try:
-            r = session.get(
-                f"{config.CANVAS_BASE_URL}/api/v1/users/self/graded_submissions",
-                params={'per_page': per_page, 'page': 1}
-            )
-            if 'last' in r.links:
-                last_url = r.links['last']['url']
-                match = re.search(r'[?&]page=(\d+)', last_url)
-                if match:
-                    total_pages = int(match.group(1))
-        except:
-            pass
-
-    print(f"  Target: {total_pages} pages")
-
-    # Step 2: Fetch all pages concurrently
+    max_pages = 5  # Limit to recent history
     all_graded = []
     fetch_start = time.time()
     
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(fetch_page, session, p, per_page): p for p in range(1, total_pages + 1)}
+    # Fetch first few pages concurrently
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {executor.submit(fetch_page, session, p, per_page): p for p in range(1, max_pages + 1)}
         
         completed = 0
         for future in concurrent.futures.as_completed(futures):
             data = future.result()
-            all_graded.extend(data)
+            if data:
+                all_graded.extend(data)
             completed += 1
-            elapsed = time.time() - fetch_start
-            print(f"\r  Fetching: {completed}/{total_pages} pages | Items: {len(all_graded)} | {elapsed:.1f}s", end='', flush=True)
+            print(f"\r  Fetching: {completed}/{max_pages} pages | Items: {len(all_graded)}", end='', flush=True)
             
-    print(f"\n  ✓ Fetched {len(all_graded)} raw items in {time.time() - fetch_start:.2f}s")
+    print(f"\n  ✓ Fetched {len(all_graded)} recent items in {time.time() - fetch_start:.2f}s")
 
     # Step 3: Get metadata
     print("Fetching course names...")

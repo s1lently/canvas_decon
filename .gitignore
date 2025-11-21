@@ -37,6 +37,7 @@ homework_submissions/
 *.md
 !README.md
 !CLAUDE.md
+!GEMINI.md
 !misc/md/*.md
 *.docx
 

@@ -25,6 +25,9 @@
    QLabel {
     background-color: transparent;
    }
+   QWidget#headerRightPlaceholder, QWidget#manualModeTogglePlaceholder {
+    background-color: transparent;
+   }
    QPushButton#backBtn {
     background-color: transparent;
     border: none;

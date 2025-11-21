@@ -63,6 +63,15 @@ CLAUDE_API_KEY = _config.get('claude_api_key', '')
 # Canvas URLs (从account_config读取，否则使用默认值)
 CANVAS_BASE_URL = _config.get('preference', {}).get('base_url', 'https://psu.instructure.com')
 
+def reload_config():
+    """Reload configuration from account_config.json"""
+    global _config, GEMINI_API_KEY, CLAUDE_API_KEY, CANVAS_BASE_URL
+    _config = _load_account_config()
+    GEMINI_API_KEY = _config.get('gemini_api_key', 'AIzaSyBZTx5UDH7pxyYZUgpDzKHRU25FWoPIA8I')
+    CLAUDE_API_KEY = _config.get('claude_api_key', '')
+    CANVAS_BASE_URL = _config.get('preference', {}).get('base_url', 'https://psu.instructure.com')
+    print(f"[INFO] Config reloaded. Gemini: {GEMINI_API_KEY[:4]}... Claude: {CLAUDE_API_KEY[:4]}...")
+
 # Legacy compatibility
 ACCOUNT_INFO_FILE = ACCOUNT_CONFIG_FILE
 

@@ -85,6 +85,9 @@ def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False
 def _gemini(prompt, model, uploaded_info=None):
     """Gemini API调用 (使用新SDK)"""
     from google import genai
+    from google.genai import errors
+    import time
+    
     client = genai.Client(api_key=config.GEMINI_API_KEY)
 
     # 构建 contents
@@ -93,12 +96,26 @@ def _gemini(prompt, model, uploaded_info=None):
         # 添加上传的文件
         contents.extend([info['uploaded_obj'] for info in uploaded_info])
 
-    # 调用 API
-    response = client.models.generate_content(
-        model=model,
-        contents=contents
-    )
-    return response.text
+    # 调用 API with retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=contents
+            )
+            return response.text
+        except errors.ClientError as e:
+            # Check for 429 Resource Exhausted
+            if "RESOURCE_EXHAUSTED" in str(e) or getattr(e, 'code', 0) == 429:
+                if attempt < max_retries - 1:
+                    wait_time = 60 * (attempt + 1)  # 60s, 120s
+                    print(f"\n[WARN] Gemini Rate Limit (429). Waiting {wait_time}s before retry {attempt+1}/{max_retries}...")
+                    time.sleep(wait_time)
+                    continue
+            raise e
+            
+    return ""
 
 def _claude(prompt, model, uploaded_info=None, thinking=False):
     """Claude API调用"""

@@ -106,7 +106,8 @@ class SittingWindowHandler(BaseHandler):
             if claude_key:
                 saved_keys.append("Claude")
 
-            QMessageBox.information(self.app, "Success", f"{' and '.join(saved_keys)} API Key(s) saved successfully!\nRestart the app to apply changes.")
+            config.reload_config()
+            QMessageBox.information(self.app, "Success", f"{' and '.join(saved_keys)} API Key(s) saved successfully!\nChanges applied immediately.")
             self.load_api_settings()  # Reload to show masked keys
         except Exception as e:
             QMessageBox.critical(self.app, "Error", f"Failed to save API keys: {str(e)}")

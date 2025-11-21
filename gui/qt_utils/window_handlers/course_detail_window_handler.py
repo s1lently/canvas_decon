@@ -272,7 +272,7 @@ class CourseDetailWindowHandler(BaseHandler):
                     console.append("! No valid bookmarks found - falling back to AI analysis")
                     pdf_to_split = file_path
 
-                    TOC_PAGES = min(200, total_pages)
+                    TOC_PAGES = min(80, total_pages)
                     writer = PdfWriter()
                     for i in range(TOC_PAGES):
                         writer.add_page(reader.pages[i])
@@ -285,7 +285,7 @@ class CourseDetailWindowHandler(BaseHandler):
                     progress.update_progress(3, 7, "Step 3/7: Analyzing TOC...")
                     uploaded_info = upload_files([temp_toc_pdf.name], 'Gemini')
 
-                    toc_prompt = """Analyze this textbook PDF (first 200 pages) and extract the Table of Contents.
+                    toc_prompt = """Analyze this textbook PDF (first 80 pages) and extract the Table of Contents.
 
 Your task has TWO CRITICAL STEPS:
 

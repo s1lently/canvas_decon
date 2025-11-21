@@ -191,7 +191,7 @@ class GlobalSidebar(QWidget):
             ('🏠', 'Launch', 'launch'),
             ('📋', 'Main', 'main'),
             ('⚡', 'Auto', 'auto'),
-            ('⚙️', 'Sitting', 'sitting')
+            ('⚙️', 'Settings', 'sitting')
         ]
 
         for icon, text, nav_id in nav_items:

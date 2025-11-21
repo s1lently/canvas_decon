@@ -1,7 +1,7 @@
-"""Sitting Window Handler - Manages Settings Window (9 methods)"""
+"""Sitting Window Handler - Manages Settings Overlay"""
 import sys, os, json
 from io import StringIO
-from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, QTimer
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
@@ -9,23 +9,58 @@ from gui.qt_utils.base_handler import BaseHandler
 
 
 class SittingWindowHandler(BaseHandler):
-    """Handles Sitting Window operations"""
+    """Handles Settings Overlay operations"""
 
     def __init__(self, app):
         super().__init__(app)
-
+        
         # Setup auto-refresh timer for tasks table (every 300ms)
         self.tasks_refresh_timer = QTimer()
         self.tasks_refresh_timer.timeout.connect(self.refresh_tasks_table)
         self.tasks_refresh_timer.start(300)  # 0.3 seconds
 
+    @property
+    def settings_overlay(self):
+        """Access the settings overlay from app"""
+        return getattr(self.app, 'settings_overlay', None)
+
+    @property
+    def sitting_window(self):
+        """Alias for compatibility with existing methods that use self.sitting_window"""
+        return self.settings_overlay
+
+    def show(self):
+        """Show settings overlay"""
+        if self.settings_overlay:
+            self.update_geometry()
+            self.settings_overlay.show()
+            self.settings_overlay.raise_()
+            self.refresh_tasks_table()
+
+    def hide(self):
+        """Hide settings overlay"""
+        if self.settings_overlay:
+            self.settings_overlay.hide()
+
+    def toggle(self):
+        """Toggle visibility"""
+        if self.settings_overlay and self.settings_overlay.isVisible():
+            self.hide()
+        else:
+            self.show()
+
+    def update_geometry(self):
+        """Update geometry to match parent window"""
+        if self.settings_overlay and self.app:
+            self.settings_overlay.setGeometry(self.app.rect())
+
     def open(self):
-        """Open sitting window"""
-        self.stacked_widget.setCurrentWidget(self.sitting_window)
-        self.refresh_tasks_table()
+        """Legacy method - aliased to show"""
+        self.show()
 
     def load_current_login_info(self):
         """Load and display current login account info"""
+        if not self.sitting_window: return
         try:
             if os.path.exists(config.ACCOUNT_CONFIG_FILE):
                 with open(config.ACCOUNT_CONFIG_FILE) as f:
@@ -37,6 +72,7 @@ class SittingWindowHandler(BaseHandler):
 
     def load_api_settings(self):
         """Load current API settings into the form"""
+        if not self.sitting_window: return
         try:
             if os.path.exists(config.ACCOUNT_CONFIG_FILE):
                 with open(config.ACCOUNT_CONFIG_FILE) as f:
@@ -107,7 +143,7 @@ class SittingWindowHandler(BaseHandler):
                 saved_keys.append("Claude")
 
             config.reload_config()
-            QMessageBox.information(self.app, "Success", f"{' and '.join(saved_keys)} API Key(s) saved successfully!\nChanges applied immediately.")
+            QMessageBox.information(self.app, "Success", f"{(' and '.join(saved_keys))} API Key(s) saved successfully!\nChanges applied immediately.")
             self.load_api_settings()  # Reload to show masked keys
         except Exception as e:
             QMessageBox.critical(self.app, "Error", f"Failed to save API keys: {str(e)}")
@@ -139,6 +175,9 @@ class SittingWindowHandler(BaseHandler):
 
     def refresh_tasks_table(self):
         """Refresh tasks table with current running tasks"""
+        if not self.settings_overlay or not self.settings_overlay.isVisible():
+            return
+            
         from gui.core.mgrTask import get_task_manager
         from datetime import datetime
 

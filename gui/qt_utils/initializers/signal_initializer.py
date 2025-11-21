@@ -11,7 +11,7 @@ class SignalInitializer:
     def init_button_bindings(app):
         """Initialize all button click bindings"""
         mw = app.main_window
-        sw = app.sitting_window
+        sw = app.settings_overlay  # Use overlay instead of standalone window
         aw = app.automation_window
         cdw = app.course_detail_window
         adw = app.auto_detail_window
@@ -24,7 +24,7 @@ class SignalInitializer:
         mw.gSyllAllBtn.clicked.connect(lambda: qt_interact.on_gsyll_all_clicked(mw.consoleTabWidget))
         mw.cleanBtn.clicked.connect(app.sitting_handler.show_clean_dialog)
         mw.automationTopBtn.clicked.connect(app.automation_handler.open_top)
-        mw.sittingBtn.clicked.connect(app.sitting_handler.open)
+        mw.sittingBtn.clicked.connect(app.sitting_handler.show) # Updated to show overlay
         mw.openFolderBtn.clicked.connect(app.main_handler.on_open_folder_clicked)
         mw.courseDetailBtn.clicked.connect(app.course_detail_handler.open)
 
@@ -41,11 +41,14 @@ class SignalInitializer:
         # Console tab close
         mw.consoleTabWidget.tabCloseRequested.connect(app.main_handler.close_tab)
 
-        # === SITTING WINDOW ===
-        sw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
+        # === SITTING OVERLAY ===
+        sw.backBtn.clicked.connect(app.sitting_handler.hide) # Updated: Hide overlay
+        
+        # Submit button (pass sw widgets correctly)
         sw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(
             sw.accountInput, sw.passwordInput, sw.keyInput, app.stacked_widget, mw, app.manual_mode_toggle
         ))
+        
         sw.saveApiBtn.clicked.connect(app.sitting_handler.save_api_key)
         sw.savePrefBtn.clicked.connect(lambda: app.sitting_handler.save_preference(sw.baseUrlInput.text()))
 
@@ -151,9 +154,9 @@ class SignalInitializer:
             app.launcher_handler.hide(),
             app.automation_handler.open_top()
         ))
-        app.launcher_overlay.settingsBtn.clicked.connect(lambda: qt_interact.on_login_clicked(
-            mw, app.stacked_widget, sw, app
-        ))
+        # Updated: Settings button opens overlay
+        app.launcher_overlay.settingsBtn.clicked.connect(app.sitting_handler.show)
+        
         app.launcher_overlay.courseList.itemDoubleClicked.connect(app.launcher_handler.on_course_double_clicked)
         app.launcher_overlay.todoList.itemDoubleClicked.connect(app.launcher_handler.on_todo_double_clicked)
 
@@ -177,7 +180,8 @@ class SignalInitializer:
             elif page_id == 'auto':
                 app.automation_handler.open_top()
             elif page_id == 'sitting':
-                app.stacked_widget.setCurrentWidget(sw)
+                # Sitting is now an overlay
+                app.sitting_handler.show()
 
         app.sidebar.navigate.connect(navigate_to)
 

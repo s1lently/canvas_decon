@@ -24,21 +24,22 @@ class UIInitializer:
 
     @staticmethod
     def init_qt(app):
-        """Initialize Qt UI: Load 6 windows + create widgets"""
+        """Initialize Qt UI: Load windows + create widgets"""
         # Create stacked widget (full width, no sidebar in layout)
         app.stacked_widget = QStackedWidget()
         app.setCentralWidget(app.stacked_widget)
 
         # Load UI files (support both dev and PyInstaller)
         app.main_window = loadUi(get_resource_path('gui/ui/main.ui'))
-        app.sitting_window = loadUi(get_resource_path('gui/ui/sitting.ui'))
+        # app.sitting_window = loadUi(get_resource_path('gui/ui/sitting.ui')) # Removed: Replaced by overlay
         app.automation_window = loadUi(get_resource_path('gui/ui/automation.ui'))
         app.course_detail_window = loadUi(get_resource_path('gui/ui/course_detail.ui'))
         app.auto_detail_window = loadUi(get_resource_path('gui/ui/autoDetail.ui'))
         app.launcher_overlay = loadUi(get_resource_path('gui/ui/launcher.ui'))
+        app.settings_overlay = loadUi(get_resource_path('gui/ui/settings_overlay.ui'))
 
         # Add windows to stacked widget
-        for w in [app.main_window, app.sitting_window, app.automation_window,
+        for w in [app.main_window, app.automation_window,
                   app.course_detail_window, app.auto_detail_window]:
             app.stacked_widget.addWidget(w)
 
@@ -71,8 +72,6 @@ class UIInitializer:
         ]):
             getattr(app.automation_window, layout).addWidget(toggle)
 
-        # Removed: ios_toggle_course_detail (console toggle moved to sidebar)
-
         # Enable drag-and-drop for course detail
         app.course_detail_window.itemList.setAcceptDrops(True)
         app.course_detail_window.itemList.setDragEnabled(False)
@@ -98,10 +97,11 @@ class UIInitializer:
         placeholder.deleteLater()
         layout.insertWidget(idx, app.thinking_toggle)
 
-        # Manual 2FA mode toggle (for Sitting)
+        # Manual 2FA mode toggle (for Settings Overlay)
         app.manual_mode_toggle = IOSToggle(width=50, height=24)
         app.manual_mode_toggle.setChecked(False)
-        placeholder = app.sitting_window.manualModeTogglePlaceholder
+        # Update to use settings_overlay instead of sitting_window
+        placeholder = app.settings_overlay.manualModeTogglePlaceholder
         layout = placeholder.parent().layout()
         idx = layout.indexOf(placeholder)
         layout.removeWidget(placeholder)
@@ -120,6 +120,10 @@ class UIInitializer:
 
         # Init launcher overlay
         UIInitializer._init_launcher_overlay(app)
+        
+        # Init settings overlay
+        UIInitializer._init_settings_overlay(app)
+        app.sitting_window = app.settings_overlay  # Alias for backward compatibility
 
         # Init floating sidebar
         UIInitializer._init_sidebar(app)
@@ -139,6 +143,15 @@ class UIInitializer:
         app.main_window.installEventFilter(app)
         app.launcher_overlay.todoList.installEventFilter(app)
         app.launcher_overlay.courseList.installEventFilter(app)
+
+    @staticmethod
+    def _init_settings_overlay(app):
+        """Initialize settings overlay UI"""
+        from PyQt6.QtCore import Qt as QtCore
+
+        app.settings_overlay.setParent(app)  # Parent to main window (app) to overlay ALL views
+        app.settings_overlay.setAttribute(QtCore.WidgetAttribute.WA_StyledBackground, True)
+        app.settings_overlay.hide()
 
     @staticmethod
     def _init_sidebar(app):

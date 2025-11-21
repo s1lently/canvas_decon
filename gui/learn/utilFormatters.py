@@ -18,7 +18,8 @@ def format_course(course):
     for k, v in course.items():
         if k == 'name': continue
         if isinstance(v, dict):
-            html += f"<p><strong>{k}:</strong></p><ul>{''.join(f'<li>{sk}: <span style=\"color: #22c55e;\">{sv}</span></li>' for sk, sv in v.items())}</ul>"
+            items_html = ''.join(f"<li>{sk}: <span style='color: #22c55e;'>{sv}</span></li>" for sk, sv in v.items())
+            html += f"<p><strong>{k}:</strong></p><ul>{items_html}</ul>"
         elif k in ['url', 'html_url', 'calendar_url'] or ('url' in k.lower() and isinstance(v, str)):
             html += f"<p><strong>{k}:</strong> {make_url_clickable(v)}</p>"
         else:
@@ -65,5 +66,9 @@ def format_folder(foldername):
     if os.path.exists(fp):
         files_dir = os.path.join(fp, 'files')
         files = [f for f in os.listdir(files_dir) if os.path.isfile(os.path.join(files_dir, f))] if os.path.exists(files_dir) else []
-        html += (f"<p><strong>Files ({len(files)}):</strong></p><ul>{''.join(f'<li>{f} <span style=\"color: #aaa;\">({os.path.getsize(os.path.join(files_dir, f)):,} bytes)</span></li>' for f in sorted(files))}</ul>" if files else "<p><em>No files in folder</em></p>")
+        if files:
+            items_html = ''.join(f"<li>{f} <span style='color: #aaa;'>({os.path.getsize(os.path.join(files_dir, f)):,} bytes)</span></li>" for f in sorted(files))
+            html += f"<p><strong>Files ({len(files)}):</strong></p><ul>{items_html}</ul>"
+        else:
+            html += "<p><em>No files in folder</em></p>"
     return html + "</div>"

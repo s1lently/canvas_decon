@@ -114,6 +114,8 @@ class FileLoaderWorker(QObject):
 class LearnSittingWidget(QWidget):
     """3-Tab widget for Textbook: Tab1=Files, Tab2=Advanced/Prompts"""
 
+    files_loaded = pyqtSignal(list, list)
+
     def __init__(self, canvas_app, course_detail_mgr, parent=None):
         super().__init__(parent)
         self.canvas_app = canvas_app
@@ -122,6 +124,9 @@ class LearnSittingWidget(QWidget):
         
         # Loading state
         self.is_loading = False
+        
+        # Connect signal
+        self.files_loaded.connect(self._on_files_loaded)
 
         self.init_ui()
         
@@ -412,8 +417,8 @@ class LearnSittingWidget(QWidget):
                 has_report = os.path.exists(report_path)
                 learn_items.append((filename, has_report))
 
-        # Schedule update on main thread
-        QTimer.singleShot(0, lambda: self._on_files_loaded(textbook_files, learn_items))
+        # Emit signal to update UI on main thread
+        self.files_loaded.emit(textbook_files, learn_items)
 
     def _on_files_loaded(self, textbook_files, learn_items):
         """Update UI with loaded files"""

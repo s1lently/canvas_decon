@@ -22,8 +22,9 @@ This file provides essential guidance for Claude Code and other AI assistants wh
 - **GUI**: PyQt6 (6 windows, modular handlers, qt.py: 227 lines)
 - **Backend**: Python 3.10+
 - **Auth**: Selenium + TOTP (pyotp)
-- **AI**: Gemini + Claude (unified via utilPromptFiles)
-- **Web**: requests, lxml
+- **AI**: Gemini + Claude (unified via utilPromptFiles, dynamic model fetching, robust retry logic)
+- **Web**: requests, lxml, concurrent.futures (high-performance fetching)
+- **Config**: Hot-reload support for seamless updates
 
 ### High-Level Architecture (Post-Refactor)
 
@@ -115,10 +116,10 @@ User: Click "Get Cookie"
 [GET TODOS]
 qt_interact.on_get_todo_clicked()
 └─> [Thread] func/getTodos.py:main()
-    ├─> GET /api/v1/planner/items (paginated)
-    ├─> process_and_save_todos(raw_todos, session)
-    │   ├─> Merge with existing todos.json (by redirect_url)
-    │   ├─> For each TODO:
+    ├─> GET /api/v1/planner/items (Concurrent/Paginated)
+    ├─> process_and_save_todos_concurrent(raw_todos, session)
+    │   ├─> ThreadPoolExecutor (20 workers)
+    │   ├─> For each TODO (Parallel):
     │   │   ├─> fetch_assignment_details(session, url)
     │   │   │   ├─> Parse URL → course_id + assignment_id/quiz_id
     │   │   │   ├─> GET /api/v1/courses/{cid}/assignments/{aid}
@@ -612,6 +613,48 @@ for qdiv in question_divs:
     for ainput in answers:
         answer_id = ainput.get('value')
         label = qcontainer.xpath(f'.//label[@for="{ainput.get("id")}"]')[0]
+```
+
+### 7. Concurrency & Feedback Patterns
+
+**Concurrent Data Fetching**
+Use `concurrent.futures.ThreadPoolExecutor` for IO-bound tasks (API calls, file downloads).
+```python
+with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+    futures = {executor.submit(fetch_func, arg): arg for arg in items}
+    for future in concurrent.futures.as_completed(futures):
+        # Process result
+```
+
+**Real-time Status Callbacks**
+Pass a callback to deep logic functions to stream status updates to the UI without coupling.
+```python
+# In GUI Handler
+status_cb = lambda msg: console.append(msg)
+call_ai(..., status_callback=status_cb)
+
+# In Logic Function
+if status_callback:
+    status_callback("Waiting for rate limit...")
+```
+
+### 8. Drag & Drop Pattern (PyQt6)
+
+**Custom ListWidget**
+Override `dragMoveEvent` and `dropEvent` for specific handling.
+```python
+class DropListWidget(QListWidget):
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        if event.mimeData().hasUrls():
+            event.accept()
+            # Handle file drop
+            self.on_drop_callback(files)
 ```
 
 ---

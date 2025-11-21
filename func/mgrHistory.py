@@ -66,6 +66,9 @@ def batch_insert_or_update(todos, update_existing=False):
                         If True, update existing todos (use with caution!)
     """
     history = load_history()
+    # Use a set for faster lookups and to track URLs seen in this batch
+    seen_urls = {t.get('redirect_url') for t in history if t.get('redirect_url')}
+    # Keep map for updating existing items
     url_map = {t.get('redirect_url'): i for i, t in enumerate(history) if t.get('redirect_url')}
 
     new_todos = []
@@ -73,8 +76,8 @@ def batch_insert_or_update(todos, update_existing=False):
 
     for todo in todos:
         url = todo.get('redirect_url', '')
-        if url in url_map:
-            if update_existing:
+        if url in seen_urls:
+            if update_existing and url in url_map:
                 # Update existing (dangerous - may overwrite user data!)
                 history[url_map[url]] = todo
             else:
@@ -83,6 +86,7 @@ def batch_insert_or_update(todos, update_existing=False):
         else:
             # Collect new todos for batch insertion
             new_todos.append(todo)
+            seen_urls.add(url)  # Mark as seen for this batch
 
     # Batch insert new todos (sorted by due_date)
     for todo in new_todos:

@@ -284,6 +284,9 @@ class CourseDetailWindowHandler(BaseHandler):
 
                     progress.update_progress(3, 7, "Step 3/7: Analyzing TOC...")
                     uploaded_info = upload_files([temp_toc_pdf.name], 'Gemini')
+                    
+                    # Callback for status updates (e.g. 429 retries)
+                    status_cb = lambda msg: console.append(msg)
 
                     toc_prompt = """Analyze this textbook PDF (first 80 pages) and extract the Table of Contents.
 
@@ -322,7 +325,7 @@ CRITICAL RULES:
 4. "chapters": ONLY include chapters with actual page numbers. Skip "online", "web", or numberless entries
 5. Return ONLY the JSON object, no markdown, no explanations"""
 
-                    result = call_ai(toc_prompt, 'Gemini', model_name, uploaded_info=uploaded_info)
+                    result = call_ai(toc_prompt, 'Gemini', model_name, uploaded_info=uploaded_info, status_callback=status_cb)
                     os.unlink(temp_toc_pdf.name)
 
                     progress.update_progress(4, 7, "Step 4/7: Parsing TOC...")
@@ -417,7 +420,7 @@ IMPORTANT:
 - DO NOT include: Appendices (Appendix A/B/C), Index, Answers, Table of Contents, or any unnumbered sections
 - Return ONLY the JSON array"""
 
-                        tail_result = call_ai(tail_prompt, 'Gemini', model_name, uploaded_info=tail_uploaded)
+                        tail_result = call_ai(tail_prompt, 'Gemini', model_name, uploaded_info=tail_uploaded, status_callback=status_cb)
                         os.unlink(temp_tail_pdf.name)
 
                         tail_clean = tail_result.strip()
@@ -504,6 +507,8 @@ IMPORTANT:
                         os.unlink(repaired_pdf_path)
                     except:
                         pass
+                
+                raise e  # Re-raise to notify caller of failure
 
         from gui.core import utilQtInteract as qt_interact
         console, progress = qt_interact._create_console_tab(self.course_detail_window.consoleTabWidget, f"Decon: {selected_file}", with_progress=True)

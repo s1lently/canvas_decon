@@ -112,72 +112,137 @@ def convert_submission_to_todo_format(submission, session, courses_map):
         'assignment_details': assignment_details
     }
 
-def get_history_todos(session):
-    """Get all graded/completed assignments - exact getTodos.py format"""
-    print("Fetching graded submissions (historical TODOs)...")
+import concurrent.futures
+import time
 
-    # Get graded submissions with pagination
-    all_graded = []
-    page = 1
-    per_page = 100
+# ... (previous imports)
 
-    while True:
-        print(f"  Page {page}...", end='', flush=True)
-        response = session.get(
+def get_total_pages(session, per_page=100):
+    """Detect total pages using Link header"""
+    try:
+        r = session.head(
             f"{config.CANVAS_BASE_URL}/api/v1/users/self/graded_submissions",
             params={'per_page': per_page}
         )
-        response.raise_for_status()
-        graded = response.json()
+        if 'last' in r.links:
+            last_url = r.links['last']['url']
+            match = re.search(r'[?&]page=(\d+)', last_url)
+            if match:
+                return int(match.group(1))
+    except:
+        pass
+    # If no Link header or failed, try page 2 check or just default to assumption
+    return 1
 
-        if not graded:
-            print(f" done")
-            break
+def fetch_page(session, page, per_page):
+    """Worker function to fetch a single page"""
+    try:
+        r = session.get(
+            f"{config.CANVAS_BASE_URL}/api/v1/users/self/graded_submissions",
+            params={'per_page': per_page, 'page': page},
+            timeout=15
+        )
+        if r.status_code == 200:
+            return r.json()
+    except:
+        pass
+    return []
 
-        print(f" {len(graded)} items", flush=True)
-        all_graded.extend(graded)
+def get_history_todos(session):
+    """Get all graded/completed assignments - Concurrent Version"""
+    start_total = time.time()
+    print("Fetching graded submissions (Concurrent Mode)...")
 
-        # Check for next page
-        if 'next' not in response.links:
-            break
+    # Step 1: Detect pages
+    per_page = 100
+    total_pages = get_total_pages(session, per_page)
+    
+    # If detection failed (returns 1) but we might have more, try fetching p1 to see links
+    if total_pages == 1:
+        try:
+            r = session.get(
+                f"{config.CANVAS_BASE_URL}/api/v1/users/self/graded_submissions",
+                params={'per_page': per_page, 'page': 1}
+            )
+            if 'last' in r.links:
+                last_url = r.links['last']['url']
+                match = re.search(r'[?&]page=(\d+)', last_url)
+                if match:
+                    total_pages = int(match.group(1))
+        except:
+            pass
 
-        page += 1
-        if page > 50:  # Safety limit
-            break
+    print(f"  Target: {total_pages} pages")
 
-    graded = all_graded
-    print(f"Found {len(graded)} graded submissions total")
+    # Step 2: Fetch all pages concurrently
+    all_graded = []
+    fetch_start = time.time()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = {executor.submit(fetch_page, session, p, per_page): p for p in range(1, total_pages + 1)}
+        
+        completed = 0
+        for future in concurrent.futures.as_completed(futures):
+            data = future.result()
+            all_graded.extend(data)
+            completed += 1
+            elapsed = time.time() - fetch_start
+            print(f"\r  Fetching: {completed}/{total_pages} pages | Items: {len(all_graded)} | {elapsed:.1f}s", end='', flush=True)
+            
+    print(f"\n  ✓ Fetched {len(all_graded)} raw items in {time.time() - fetch_start:.2f}s")
 
-    # Get courses map
+    # Step 3: Get metadata
     print("Fetching course names...")
     courses_map = get_courses_map(session)
-
-    # Get current time for filtering
+    
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
 
-    # Convert each submission
+    # Step 4: Convert concurrently (Heavy IO due to assignment details fetch)
+    print("Converting submissions (Heavy IO)...")
     history_todos = []
     skipped_future = 0
-    for i, sub in enumerate(graded, 1):
-        if sub.get('graded_at'):  # Only graded items
-            print(f"  {i}/{len(graded)}", end='\r')
-            todo = convert_submission_to_todo_format(sub, session, courses_map)
-            if todo:
-                # Filter: only include past-due assignments
-                due_date_str = todo.get('due_date')
-                if due_date_str:
-                    try:
-                        due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
-                        if due_date > now:
-                            skipped_future += 1
-                            continue  # Skip future assignments
-                    except:
-                        pass  # If date parsing fails, include it anyway
+    
+    # Filter valid submissions first
+    valid_subs = [s for s in all_graded if s.get('graded_at')]
+    
+    convert_start = time.time()
+    processed_count = 0
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        # Submit all tasks
+        future_to_sub = {executor.submit(convert_submission_to_todo_format, sub, session, courses_map): sub for sub in valid_subs}
+        
+        total_subs = len(valid_subs)
+        
+        for future in concurrent.futures.as_completed(future_to_sub):
+            processed_count += 1
+            try:
+                todo = future.result()
+                if todo:
+                    # Filter future
+                    due_date_str = todo.get('due_date')
+                    if due_date_str:
+                        try:
+                            due_date = datetime.fromisoformat(due_date_str.replace('Z', '+00:00'))
+                            if due_date > now:
+                                skipped_future += 1
+                                continue
+                        except:
+                            pass
+                    history_todos.append(todo)
+            except Exception as e:
+                pass
+            
+            # Progress update
+            elapsed = time.time() - convert_start
+            speed = processed_count / elapsed if elapsed > 0 else 0
+            print(f"\r  Converting: {processed_count}/{total_subs} | Speed: {speed:.1f} items/s | Found: {len(history_todos)}", end='', flush=True)
 
-                history_todos.append(todo)
-
-    print(f"\n✓ Converted {len(history_todos)} history TODOs (skipped {skipped_future} future)")
+    total_time = time.time() - start_total
+    print(f"\n✓ Completed in {total_time:.2f}s (Avg: {len(history_todos)/total_time:.1f} items/s)")
+    print(f"  Total History TODOs: {len(history_todos)} (Skipped {skipped_future} future)")
+    
     return history_todos
 
 def save_history_todos(todos):

@@ -62,7 +62,7 @@ def _upload_claude(files):
         })
     return uploaded_info
 
-def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False):
+def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False, status_callback=None):
     """统一AI调用接口
 
     Args:
@@ -72,17 +72,18 @@ def call_ai(prompt, product, model, files=[], uploaded_info=None, thinking=False
         files: 文件路径列表（如果 uploaded_info 为 None）
         uploaded_info: 预上传的文件信息（来自 upload_files()）
         thinking: 是否启用thinking模式（仅Claude支持，默认False）
+        status_callback: 可选回调函数，接受字符串参数，用于状态通知 (e.g. lambda msg: print(msg))
 
     Returns:
         str: AI生成的文本结果
     """
     if product == 'Gemini':
-        return _gemini(prompt, model, uploaded_info=uploaded_info)
+        return _gemini(prompt, model, uploaded_info=uploaded_info, status_callback=status_callback)
     elif product == 'Claude':
         return _claude(prompt, model, uploaded_info=uploaded_info, thinking=thinking)
     raise ValueError(f"Unknown product: {product}")
 
-def _gemini(prompt, model, uploaded_info=None):
+def _gemini(prompt, model, uploaded_info=None, status_callback=None):
     """Gemini API调用 (使用新SDK)"""
     from google import genai
     from google.genai import errors
@@ -105,12 +106,16 @@ def _gemini(prompt, model, uploaded_info=None):
                 contents=contents
             )
             return response.text
-        except errors.ClientError as e:
-            # Check for 429 Resource Exhausted
-            if "RESOURCE_EXHAUSTED" in str(e) or getattr(e, 'code', 0) == 429:
+        except Exception as e:
+            # Check for 429 Resource Exhausted (flexible check)
+            err_str = str(e)
+            if "RESOURCE_EXHAUSTED" in err_str or "429" in err_str or getattr(e, 'code', 0) == 429:
                 if attempt < max_retries - 1:
                     wait_time = 60 * (attempt + 1)  # 60s, 120s
-                    print(f"\n[WARN] Gemini Rate Limit (429). Waiting {wait_time}s before retry {attempt+1}/{max_retries}...")
+                    msg = f"\n[WARN] Gemini Rate Limit (429). Waiting {wait_time}s before retry {attempt+1}/{max_retries}..."
+                    print(msg)
+                    if status_callback:
+                        status_callback(msg)
                     time.sleep(wait_time)
                     continue
             raise e

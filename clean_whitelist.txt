@@ -23,6 +23,7 @@ course.json
 
 # 保留的文档
 CLAUDE.md
+GEMINI.md
 README.md
 requirements.txt
 Done.txt

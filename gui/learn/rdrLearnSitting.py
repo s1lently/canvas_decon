@@ -15,7 +15,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import config
 from gui.learn.cfgLearnPrefs import (load_preferences, save_preferences,
                                     get_available_products, get_available_models,
-                                    get_resolved_product_model, set_product, set_model)
+                                    get_resolved_product_model, set_product, set_model,
+                                    refresh_available_models)
 
 
 class DropListWidget(QListWidget):
@@ -233,6 +234,13 @@ class LearnSittingWidget(QWidget):
         btn_api.setFixedSize(60, 35)
         btn_api.clicked.connect(lambda: self.canvas_app.sitting_handler.show())
         header_layout.addWidget(btn_api)
+
+        # Refresh Models Button
+        btn_refresh = QPushButton("🔄")
+        btn_refresh.setToolTip("Refresh Model List from API")
+        btn_refresh.setFixedSize(40, 35)
+        btn_refresh.clicked.connect(self.on_refresh_models)
+        header_layout.addWidget(btn_refresh)
 
         layout.addWidget(header_frame)
 
@@ -493,6 +501,40 @@ class LearnSittingWidget(QWidget):
         folder = self.course_detail_mgr.get_learn_dir()
         if not os.path.exists(folder): os.makedirs(folder)
         subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', folder])
+
+    def on_refresh_models(self):
+        """Refresh models from API"""
+        from gui.widgets.rdrToast import show_toast
+        
+        try:
+            # 1. Refresh data
+            refresh_available_models()
+            
+            # 2. Update UI
+            current_product = self.header_product_combo.currentText()
+            current_model = self.header_model_combo.currentText()
+            
+            # Reload models for current product
+            self.header_model_combo.blockSignals(True)
+            self.header_model_combo.clear()
+            models = get_available_models(current_product)
+            self.header_model_combo.addItems(models)
+            
+            # Restore selection if possible, else select first
+            if current_model in models:
+                self.header_model_combo.setCurrentText(current_model)
+            elif models:
+                self.header_model_combo.setCurrentIndex(0)
+                set_model(models[0])
+                
+            self.header_model_combo.blockSignals(False)
+            self.update_resolved_model_display()
+            
+            show_toast(self.canvas_app, "Model list refreshed!", 'success', 2000)
+            
+        except Exception as e:
+            print(f"Error refreshing models: {e}")
+            show_toast(self.canvas_app, "Failed to refresh models", 'error', 3000)
 
     def on_batch_generate(self):
         # (Logic identical to previous, simplified for brevity)

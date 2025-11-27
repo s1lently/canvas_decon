@@ -43,7 +43,8 @@ a = Analysis(
         'func.procLearnMaterial',
         'func.mgrHistory',
         'func.utilPromptFiles',
-        'func.utilModelSelector',
+        'func.utilModels',
+        'func.getQuizStatus',
         'func.utilPdfBookmark',
         'func.utilPdfSplitter',
         # Dynamically imported login/ modules

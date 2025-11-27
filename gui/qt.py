@@ -42,6 +42,7 @@ class AutoDetailSignal(QObject):
     """AutoDetail status and preview updates"""
     status_update = pyqtSignal(str)
     preview_refresh = pyqtSignal()
+    quiz_not_started = pyqtSignal()
 
 
 class CourseDetailSignal(QObject):
@@ -89,6 +90,7 @@ class CanvasApp(QMainWindow):
         self.auto_detail_signal = AutoDetailSignal()
         self.auto_detail_signal.status_update.connect(self._update_auto_detail_status)
         self.auto_detail_signal.preview_refresh.connect(self._refresh_auto_detail_preview)
+        self.auto_detail_signal.quiz_not_started.connect(self._on_quiz_not_started)
 
         self.course_detail_signal = CourseDetailSignal()
         self.course_detail_signal.refresh_category.connect(self._refresh_current_category)
@@ -199,6 +201,10 @@ class CanvasApp(QMainWindow):
     def _refresh_auto_detail_preview(self):
         """Refresh AutoDetail preview"""
         self.auto_detail_handler.refresh_preview()
+
+    def _on_quiz_not_started(self):
+        """Handle quiz not started signal"""
+        self.auto_detail_handler.on_quiz_not_started()
 
     def _refresh_current_category(self):
         """Refresh current category in CourseDetail"""

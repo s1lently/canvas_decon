@@ -184,7 +184,7 @@ class AutoDetailWindowHandler(BaseHandler):
         threading.Thread(target=run, daemon=True).start()
         adw.previewStatusLabel.setText("Status: Generating...")
 
-    def on_quiz_again_clicked(self):
+    def on_quiz_again_clicked(self, auto_start=False):
         """Regenerate quiz answers with current settings"""
         if not self.auto_detail_mgr:
             return
@@ -206,7 +206,15 @@ class AutoDetailWindowHandler(BaseHandler):
         def run():
             try:
                 from func import getQuiz_ultra
-                result = getQuiz_ultra.run_gui(url, product, model, prompt, assignment_folder, thinking=thinking)
+                result = getQuiz_ultra.run_gui(url, product, model, prompt, assignment_folder, thinking=thinking, auto_start=auto_start)
+
+                # Check if quiz is not started
+                if result.get('status') == 'not_started':
+                    self.app.auto_detail_signal.status_update.emit("Status: Quiz not started")
+                    # Emit signal to show confirmation dialog on main thread
+                    self.app.auto_detail_signal.quiz_not_started.emit()
+                    return
+
                 self.app._last_quiz_result = result
                 self.app.auto_detail_signal.status_update.emit("Status: Preview generated")
                 self.app.auto_detail_signal.preview_refresh.emit()
@@ -216,7 +224,22 @@ class AutoDetailWindowHandler(BaseHandler):
                 self.app.auto_detail_signal.status_update.emit(f"Status: Error - {str(e)}")
 
         threading.Thread(target=run, daemon=True).start()
-        adw.previewStatusLabel.setText("Status: Generating...")
+        adw.previewStatusLabel.setText("Status: Checking quiz status...")
+
+    def on_quiz_not_started(self):
+        """Handle quiz not started - show confirmation dialog"""
+        adw = self.auto_detail_window
+        reply = QMessageBox.question(
+            adw,
+            'Quiz Not Started',
+            'This quiz has not been started yet.\n\nDo you want to START the quiz now?\n\n⚠️ This will begin a timed attempt!',
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            # Re-run with auto_start=True
+            self.on_quiz_again_clicked(auto_start=True)
+        else:
+            adw.previewStatusLabel.setText("Status: Quiz not started - cancelled")
 
     def on_hw_preview_clicked(self):
         """Generate homework preview (same as Again)"""

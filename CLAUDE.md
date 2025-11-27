@@ -176,7 +176,8 @@ User: Submit
 ### Quiz Automation Flow
 
 ```
-User: Double-click Quiz → AutoDetail → Preview
+User: Double-click Quiz → AutoDetail (Status Bar: Score|Best|Attempts|🔴进行中/⚪未开始/✅已完成/🟡可重试)
+└─> QTimer(500ms) → func/getQuizStatus.py:get_quiz_status(url) → quiz_status_update signal
 └─> on_quiz_again_clicked()
     └─> [Thread] func/getQuiz_ultra.py:run_gui(url, product, model, prompt, folder, thinking)
         ├─> Clear auto/output/
@@ -493,15 +494,16 @@ def on_button_clicked():
 class AutoDetailSignal(QObject):
     status_update = pyqtSignal(str)
     preview_refresh = pyqtSignal()
+    quiz_not_started = pyqtSignal()
+    quiz_status_update = pyqtSignal(dict)  # Real-time quiz status (0.5s timer)
 
 # Connect in __init__
-self.auto_detail_signal.status_update.connect(self._update_status)
-self.auto_detail_signal.preview_refresh.connect(self._refresh_preview)
+self.auto_detail_signal.quiz_status_update.connect(self._update_quiz_status)
 
 # Emit from worker thread (thread-safe!)
 def worker():
-    self.auto_detail_signal.status_update.emit("Complete")
-    self.auto_detail_signal.preview_refresh.emit()
+    status = get_quiz_status(url)  # func/getQuizStatus.py
+    self.auto_detail_signal.quiz_status_update.emit(status)
 ```
 
 ### 3. Event Filter Pattern (Keyboard Navigation)
@@ -781,7 +783,7 @@ gui/config/                     # Config: cfgModel, cfgStyles
 gui/qt_utils/                   # Handlers: window_handlers/, event_handlers/, initializers/
 
 # Business Logic
-func/                           # getTodos, getCourses, getHomework, getQuiz_ultra, utilPromptFiles
+func/                           # getTodos, getCourses, getHomework, getQuiz_ultra, getQuizStatus, utilPromptFiles
 login/                          # getCookie, getTotp
 misc/jsons/                     # Runtime data: todos.json, cookies.json, course.json
 ```

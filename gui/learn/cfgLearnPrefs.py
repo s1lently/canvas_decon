@@ -130,13 +130,13 @@ def refresh_available_models():
     Returns:
         dict: Updated available_models dict
     """
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-    from utilModelSelector import get_all_gemini_models, get_all_claude_models
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+    from func.utilModels import get_gemini_models, get_claude_models
 
     available_models = {
         'Auto': ['Auto'],
-        'Gemini': ['Auto'] + get_all_gemini_models(),
-        'Claude': ['Auto'] + get_all_claude_models()
+        'Gemini': ['Auto'] + get_gemini_models(),
+        'Claude': ['Auto'] + get_claude_models()
     }
 
     # Save to preferences
@@ -205,8 +205,8 @@ def get_resolved_product_model():
     model = get_model()
 
     # Import here to avoid circular dependency
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-    from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
+    from func.utilModels import get_best_gemini_model, get_best_claude_model
 
     # Resolve product
     if product == 'Auto':
@@ -216,18 +216,9 @@ def get_resolved_product_model():
     # Resolve model
     if model == 'Auto':
         if product == 'Gemini':
-            try:
-                model = get_model_display_name(get_best_gemini_model())
-            except:
-                try:
-                    model = get_model_display_name(get_best_gemini_model())
-                except:
-                    model = 'Auto'  # Fallback to Auto
+            model = get_best_gemini_model().replace('models/', '')
         elif product == 'Claude':
-            try:
-                model = get_model_display_name(get_best_anthropic_model())
-            except:
-                model = 'claude-sonnet-4-20250514'
+            model = get_best_claude_model()
 
     return product, model
 

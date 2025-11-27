@@ -202,7 +202,7 @@ class CourseDetailWindowHandler(BaseHandler):
 
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', 'func'))
                 from utilPromptFiles import upload_files, call_ai
-                from utilModelSelector import get_best_gemini_model, get_model_display_name
+                from utilModels import get_best_gemini_model
                 from utilPdfSplitter import split_pdf_by_chapters
                 from utilPdfBookmark import extract_chapters_from_bookmarks, format_bookmark_chapters, repair_pdf_references
                 from PyPDF2 import PdfReader, PdfWriter
@@ -216,8 +216,7 @@ class CourseDetailWindowHandler(BaseHandler):
                 try:
                     if pref_product == 'Auto' or pref_model == 'Auto':
                         # Auto mode: use best available Gemini model
-                        best_model = get_best_gemini_model()
-                        model_name = get_model_display_name(best_model)
+                        model_name = get_best_gemini_model()
                         console.append(f"✓ Model: {model_name} (Auto-selected)")
                     elif pref_product == 'Gemini':
                         # Use user-selected Gemini model
@@ -226,8 +225,7 @@ class CourseDetailWindowHandler(BaseHandler):
                     else:
                         # Decon only supports Gemini, fallback to best Gemini
                         console.append(f"! Decon requires Gemini, but {pref_product} selected in preferences")
-                        best_model = get_best_gemini_model()
-                        model_name = get_model_display_name(best_model)
+                        model_name = get_best_gemini_model()
                         console.append(f"✓ Using Gemini fallback: {model_name}")
                 except Exception as e:
                     console.append(f"[ERROR] Failed to select model: {e}")

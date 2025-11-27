@@ -265,7 +265,7 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
             print(msg)
 
     try:
-        from utilModelSelector import get_best_anthropic_model, get_best_gemini_model, get_model_display_name
+        from utilModels import get_best_gemini_model, get_best_claude_model
         from utilPromptFiles import call_ai
 
         log(f"📄 Processing text file: {os.path.basename(file_path)}")
@@ -278,26 +278,13 @@ def process_text_file(file_path, output_md_path, console=None, custom_prompt=Non
             # Auto-select best model for product
             try:
                 if product == 'Claude':
-                    best_model = get_best_anthropic_model()
-                    model_name = get_model_display_name(best_model)
+                    model_name = get_best_claude_model()
                 else:  # Gemini
-                    best_model = get_best_gemini_model()
-                    model_name = get_model_display_name(best_model)
+                    model_name = get_best_gemini_model()
                 log(f"✓ Model: {model_name} ({product})")
             except Exception as e:
-                # Fallback to Auto model selection if error
-                from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
-                if product == 'Claude':
-                    try:
-                        model_name = get_model_display_name(get_best_anthropic_model())
-                    except:
-                        model_name = 'Auto'  # Let utilPromptFiles handle it
-                else:  # Gemini
-                    try:
-                        model_name = get_model_display_name(get_best_gemini_model())
-                    except:
-                        model_name = 'Auto'
-                log(f"! Fallback model: {model_name} ({product})")
+                model_name = 'Auto'
+                log(f"! Fallback model: Auto ({product})")
         else:
             model_name = model
             log(f"✓ Model: {model_name} ({product})")
@@ -462,7 +449,7 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
             print(msg)
 
     try:
-        from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
+        from utilModels import get_best_gemini_model, get_best_claude_model
         from utilPromptFiles import upload_files, call_ai
 
         ext = os.path.splitext(file_path)[1].lower()
@@ -476,26 +463,13 @@ def process_pdf_or_csv(file_path, output_md_path, console=None, custom_prompt=No
             # Auto-select best model for product
             try:
                 if product == 'Gemini':
-                    best_model = get_best_gemini_model()
-                    model_name = get_model_display_name(best_model)
+                    model_name = get_best_gemini_model()
                 else:  # Claude
-                    best_model = get_best_anthropic_model()
-                    model_name = get_model_display_name(best_model)
+                    model_name = get_best_claude_model()
                 log(f"✓ Model: {model_name} ({product})")
             except Exception as e:
-                # Fallback to Auto model selection if error
-                from utilModelSelector import get_best_gemini_model, get_best_anthropic_model, get_model_display_name
-                if product == 'Gemini':
-                    try:
-                        model_name = get_model_display_name(get_best_gemini_model())
-                    except:
-                        model_name = 'Auto'
-                else:  # Claude
-                    try:
-                        model_name = get_model_display_name(get_best_anthropic_model())
-                    except:
-                        model_name = 'Auto'
-                log(f"! Fallback model: {model_name} ({product})")
+                model_name = 'Auto'
+                log(f"! Fallback model: Auto ({product})")
         else:
             model_name = model
             log(f"✓ Model: {model_name} ({product})")

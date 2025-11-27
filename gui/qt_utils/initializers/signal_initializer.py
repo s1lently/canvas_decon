@@ -129,7 +129,10 @@ class SignalInitializer:
         # Removed: ios_toggle_course_detail signal (moved to sidebar)
 
         # === AUTO DETAIL WINDOW ===
-        adw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
+        def on_auto_detail_back():
+            app.auto_detail_handler.stop_quiz_status_timer()  # Stop timer on back
+            qt_interact.on_back_clicked(app.stacked_widget, mw)
+        adw.backBtn.clicked.connect(on_auto_detail_back)
         adw.hwFolderBtn.clicked.connect(app.auto_detail_handler.on_auto_folder_clicked)
         adw.quizFolderBtn.clicked.connect(app.auto_detail_handler.on_auto_folder_clicked)
         adw.hwDebugBtn.clicked.connect(app.auto_detail_handler.on_hw_debug_clicked)

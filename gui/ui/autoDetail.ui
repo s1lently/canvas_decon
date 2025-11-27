@@ -142,6 +142,122 @@
     </widget>
    </item>
    <item>
+    <!-- Quiz Status Bar (real-time, updates every 0.5s) -->
+    <widget class="QWidget" name="quizStatusBar" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>40</height>
+      </size>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">QWidget#quizStatusBar {
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+}</string>
+     </property>
+     <property name="visible">
+      <bool>false</bool>
+     </property>
+     <layout class="QHBoxLayout" name="quizStatusLayout">
+      <property name="spacing">
+       <number>20</number>
+      </property>
+      <property name="leftMargin">
+       <number>30</number>
+      </property>
+      <property name="topMargin">
+       <number>8</number>
+      </property>
+      <property name="rightMargin">
+       <number>30</number>
+      </property>
+      <property name="bottomMargin">
+       <number>8</number>
+      </property>
+      <item>
+       <widget class="QLabel" name="quizStatusIcon">
+        <property name="text">
+         <string>📊</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 16px;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="quizScoreLabel">
+        <property name="text">
+         <string>Score: --/--</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 14px; font-weight: bold; color: #60a5fa;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="quizBestLabel">
+        <property name="text">
+         <string>Best: --</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px; color: #a78bfa;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="quizAttemptsLabel">
+        <property name="text">
+         <string>Attempts: 0/0</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px; color: #eab308;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="quizTimeLabel">
+        <property name="text">
+         <string></string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 13px; font-weight: bold; color: #f59e0b;</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="statusSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLabel" name="quizStatusRefresh">
+        <property name="text">
+         <string>🔄 Auto-refresh</string>
+        </property>
+        <property name="styleSheet">
+         <string notr="true">font-size: 11px; color: #6b7280;</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <!-- Main workspace: 3-column layout -->
     <widget class="QSplitter" name="mainSplitter">
      <property name="orientation">

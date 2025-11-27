@@ -43,6 +43,7 @@ class AutoDetailSignal(QObject):
     status_update = pyqtSignal(str)
     preview_refresh = pyqtSignal()
     quiz_not_started = pyqtSignal()
+    quiz_status_update = pyqtSignal(dict)  # Real-time quiz status
 
 
 class CourseDetailSignal(QObject):
@@ -91,6 +92,7 @@ class CanvasApp(QMainWindow):
         self.auto_detail_signal.status_update.connect(self._update_auto_detail_status)
         self.auto_detail_signal.preview_refresh.connect(self._refresh_auto_detail_preview)
         self.auto_detail_signal.quiz_not_started.connect(self._on_quiz_not_started)
+        self.auto_detail_signal.quiz_status_update.connect(self._update_quiz_status)
 
         self.course_detail_signal = CourseDetailSignal()
         self.course_detail_signal.refresh_category.connect(self._refresh_current_category)
@@ -205,6 +207,10 @@ class CanvasApp(QMainWindow):
     def _on_quiz_not_started(self):
         """Handle quiz not started signal"""
         self.auto_detail_handler.on_quiz_not_started()
+
+    def _update_quiz_status(self, status):
+        """Update quiz status bar with real-time data"""
+        self.auto_detail_handler.update_quiz_status_bar(status)
 
     def _refresh_current_category(self):
         """Refresh current category in CourseDetail"""

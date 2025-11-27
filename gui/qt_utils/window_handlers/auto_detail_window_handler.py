@@ -2,6 +2,7 @@
 import sys, os, json, threading
 from pathlib import Path
 from PyQt6.QtWidgets import QMessageBox
+from PyQt6.QtCore import QTimer
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import config
 from gui.qt_utils.base_handler import BaseHandler
@@ -10,6 +11,128 @@ from gui.config import cfgModel as model_config
 
 class AutoDetailWindowHandler(BaseHandler):
     """Handles AutoDetail window operations"""
+
+    def __init__(self, app):
+        super().__init__(app)
+        # Quiz status timer (500ms interval)
+        self._quiz_status_timer = None
+        self._current_quiz_url = None
+
+    def _init_quiz_status_timer(self):
+        """Initialize quiz status timer"""
+        if self._quiz_status_timer is None:
+            self._quiz_status_timer = QTimer()
+            self._quiz_status_timer.setInterval(500)  # 0.5 seconds
+            self._quiz_status_timer.timeout.connect(self._fetch_quiz_status)
+
+    def start_quiz_status_timer(self, url):
+        """Start the quiz status timer"""
+        self._init_quiz_status_timer()
+        self._current_quiz_url = url
+        if not self._quiz_status_timer.isActive():
+            self._fetch_quiz_status()  # Initial fetch
+            self._quiz_status_timer.start()
+
+    def stop_quiz_status_timer(self):
+        """Stop the quiz status timer"""
+        if self._quiz_status_timer and self._quiz_status_timer.isActive():
+            self._quiz_status_timer.stop()
+        self._current_quiz_url = None
+
+    def _fetch_quiz_status(self):
+        """Fetch quiz status in background thread"""
+        if not self._current_quiz_url:
+            return
+
+        url = self._current_quiz_url
+
+        def fetch():
+            try:
+                from func.getQuizStatus import get_quiz_status
+                status = get_quiz_status(url)
+                self.app.auto_detail_signal.quiz_status_update.emit(status)
+            except Exception as e:
+                print(f"[QuizStatus] Error: {e}")
+
+        threading.Thread(target=fetch, daemon=True).start()
+
+    def update_quiz_status_bar(self, status):
+        """Update quiz status bar labels with status data"""
+        adw = self.auto_detail_window
+        if not adw:
+            return
+
+        # Show/hide status bar
+        adw.quizStatusBar.setVisible(True)
+
+        if status.get('status') == 'error':
+            adw.quizScoreLabel.setText(f"Error: {status.get('error', 'Unknown')[:30]}")
+            adw.quizScoreLabel.setStyleSheet("font-size: 14px; font-weight: bold; color: #ef4444;")
+            adw.quizBestLabel.setText("")
+            adw.quizAttemptsLabel.setText("")
+            adw.quizTimeLabel.setText("")
+            return
+
+        # Score
+        if status.get('current_score') is not None:
+            score = status['current_score']
+            total = status.get('points_possible', 0)
+            score_color = '#22c55e' if score == total else '#60a5fa'
+            adw.quizScoreLabel.setText(f"Score: {score}/{total}")
+            adw.quizScoreLabel.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {score_color};")
+        else:
+            adw.quizScoreLabel.setText("Score: --/--")
+            adw.quizScoreLabel.setStyleSheet("font-size: 14px; font-weight: bold; color: #9ca3af;")
+
+        # Best score
+        if status.get('highest_score') is not None:
+            best = status['highest_score']
+            if best != status.get('current_score'):
+                adw.quizBestLabel.setText(f"Best: {best}")
+                adw.quizBestLabel.setVisible(True)
+            else:
+                adw.quizBestLabel.setText("")
+        else:
+            adw.quizBestLabel.setText("")
+
+        # Attempts
+        used = status.get('attempts_used', 0)
+        allowed = status.get('allowed_attempts', 1)
+        left = status.get('attempts_left', 0)
+
+        if allowed == -1:
+            adw.quizAttemptsLabel.setText(f"Attempts: {used}/∞")
+            adw.quizAttemptsLabel.setStyleSheet("font-size: 13px; color: #22c55e;")
+        elif left == 0:
+            adw.quizAttemptsLabel.setText(f"Attempts: {used}/{allowed} (Done)")
+            adw.quizAttemptsLabel.setStyleSheet("font-size: 13px; color: #ef4444;")
+        else:
+            adw.quizAttemptsLabel.setText(f"Attempts: {used}/{allowed} ({left} left)")
+            adw.quizAttemptsLabel.setStyleSheet("font-size: 13px; color: #eab308;")
+
+        # Status indicator (always show current state)
+        if status.get('in_progress'):
+            if status.get('time_remaining') is not None:
+                mins = status['time_remaining'] // 60
+                secs = status['time_remaining'] % 60
+                adw.quizTimeLabel.setText(f"🔴 进行中 ⏱ {mins}:{secs:02d}")
+                adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #f59e0b;")
+            else:
+                adw.quizTimeLabel.setText("🔴 进行中")
+                adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #f59e0b;")
+        elif status.get('attempts_used', 0) == 0:
+            # Never attempted
+            adw.quizTimeLabel.setText("⚪ 未开始")
+            adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #9ca3af;")
+        elif left == 0:
+            # No attempts left
+            adw.quizTimeLabel.setText("✅ 已完成")
+            adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #22c55e;")
+        else:
+            # Has attempts, not in progress
+            time_str = f" ({status['time_limit']}min)" if status.get('time_limit') else ""
+            adw.quizTimeLabel.setText(f"🟡 可重试{time_str}")
+            adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #eab308;")
 
     def populate_window(self):
         """Populate autoDetail window with TODO data"""
@@ -54,6 +177,18 @@ class AutoDetailWindowHandler(BaseHandler):
                 print(f"Warning: Failed to save assignment_folder to todos.json: {e}")
         prompt_type = 'quiz' if is_quiz else 'homework'
         adw.promptEditBox.setPlainText(config.DEFAULT_PROMPTS.get(prompt_type, ''))
+
+        # Quiz status bar: start timer for quizzes
+        if is_quiz:
+            url = self.auto_detail_mgr.todo.get('redirect_url') or self.auto_detail_mgr.todo.get('assignment', {}).get('html_url')
+            if url:
+                if url.startswith('/'):
+                    url = f"{config.CANVAS_BASE_URL}{url}"
+                self.start_quiz_status_timer(url)
+            adw.quizStatusBar.setVisible(True)
+        else:
+            self.stop_quiz_status_timer()
+            adw.quizStatusBar.setVisible(False)
 
     def load_preview(self):
         """Load AI preview (quiz or homework) if files exist"""

@@ -1,0 +1,67 @@
+最通用的方案是写个 **zsh 函数**，这样 Tilix、VSCode 终端都能用。
+
+## 推荐方案：`clipimg` 函数
+
+把这段加到你的 `~/.zshrc`：
+
+```bash
+# 剪贴板图片 → 临时文件，返回路径
+clipimg() {
+    local file="/tmp/clip_$(date +%s).png"
+    
+    # 自动检测 X11 或 Wayland
+    if [[ -n "$WAYLAND_DISPLAY" ]]; then
+        wl-paste -t image/png > "$file" 2>/dev/null
+    else
+        xclip -selection clipboard -t image/png -o > "$file" 2>/dev/null
+    fi
+    
+    if [[ -s "$file" ]]; then
+        echo "$file"
+    else
+        rm -f "$file"
+        echo "❌ 剪贴板没有图片" >&2
+        return 1
+    fi
+}
+```
+
+然后 `source ~/.zshrc`
+
+## 使用方式
+
+```bash
+# Claude Code CLI
+claude "分析这张图" $(clipimg)
+
+# Gemini CLI  
+gemini "这是什么" $(clipimg)
+
+# 或者先保存再用
+img=$(clipimg)
+claude "解释一下" $img
+```
+
+## 依赖安装
+
+```bash
+# Ubuntu/Debian
+sudo apt install xclip wl-clipboard
+```
+
+## 进阶：快捷键绑定（可选）
+
+如果想更方便，在 Tilix 里设置快捷键，VSCode 里加 task：
+
+```json
+// .vscode/tasks.json
+{
+    "label": "Paste clipboard image path",
+    "type": "shell",
+    "command": "clipimg"
+}
+```
+
+---
+
+**总结**：这个方案的好处是 terminal-agnostic，zsh 函数在哪都能跑，X11/Wayland 自动适配。截图后直接 `$(clipimg)` 就行。

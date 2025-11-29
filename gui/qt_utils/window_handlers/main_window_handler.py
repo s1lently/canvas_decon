@@ -162,23 +162,6 @@ class MainWindowHandler(BaseHandler):
                     self.app.auto_detail_handler.populate_window()
                     self.stacked_widget.setCurrentWidget(self.auto_detail_window)
 
-    def on_toggle_console_clicked(self, state):
-        """Toggle console visibility across all windows"""
-        visible = (state == Qt.CheckState.Checked.value)
-        self.main_window.consoleTabWidget.setVisible(visible)
-        self.automation_window.consoleTabWidget.setVisible(visible)
-        self.course_detail_window.consoleTabWidget.setVisible(visible)
-
-        # Sync all toggle states (including sidebar toggle)
-        all_toggles = [self.app.ios_toggle_main] + self.app.ios_toggles_auto
-        if hasattr(self.app, 'sidebar_console_toggle'):
-            all_toggles.append(self.app.sidebar_console_toggle)
-
-        for toggle in all_toggles:
-            toggle.blockSignals(True)
-            toggle.setChecked(visible)
-            toggle.blockSignals(False)
-
     def on_history_toggle_clicked(self, state):
         """Toggle history mode"""
         self.app.history_mode = (state == Qt.CheckState.Checked.value)
@@ -223,40 +206,6 @@ class MainWindowHandler(BaseHandler):
         selected_todo = self.dm.get('todos')[ii]
         self.app.automation_handler.populate_window(selected_todo)
         self.stacked_widget.setCurrentWidget(self.automation_window)
-
-    def close_tab(self, index):
-        """Close console tab"""
-        if index > 0:
-            self.stop_task_for_tab(self.main_window.consoleTabWidget, index)
-            self.main_window.consoleTabWidget.removeTab(index)
-
-    def stop_task_for_tab(self, tab_widget, index):
-        """Stop any task associated with the given tab"""
-        from gui.core.mgrTask import get_task_manager
-        from PyQt6.QtWidgets import QTextEdit
-
-        # Get the console widget from the tab
-        tab = tab_widget.widget(index)
-        if not tab:
-            return
-
-        # Find the console widget
-        console_widget = tab.findChild(QTextEdit)
-        if not console_widget:
-            return
-
-        # Find any task with this console
-        task_manager = get_task_manager()
-        tasks = task_manager.get_all_tasks()
-
-        for task in tasks:
-            # Check if this task's console matches
-            if task.get('console') and hasattr(task['console'], 'console'):
-                # It's a ThreadSafeConsole wrapper
-                if task['console'].console == console_widget:
-                    task_manager.stop_task(task['id'])
-                    print(f"[INFO] Stopped task '{task['name']}' (tab closed)")
-                    break
 
     def open_folder(self, path):
         """Open folder cross-platform"""

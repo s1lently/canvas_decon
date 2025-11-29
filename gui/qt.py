@@ -6,7 +6,7 @@ All business logic moved to qt_utils/ handlers
 import sys, os, threading, subprocess, platform
 from datetime import datetime, timedelta
 from PyQt6.QtWidgets import QMainWindow
-from PyQt6.QtCore import pyqtSignal, QObject, QEvent
+from PyQt6.QtCore import pyqtSignal, QObject, QEvent, Qt
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config, checkStatus
@@ -14,6 +14,7 @@ from gui.core import utilQtInteract
 from gui.core.mgrData import DataManager
 from gui.core.mgrDone import DoneManager
 from gui.widgets import rdrToast
+from gui.widgets.wgtMissionControl import MissionControl
 
 # Import all handlers
 from gui.qt_utils.window_handlers.launcher_handler import LauncherHandler
@@ -77,6 +78,7 @@ class CanvasApp(QMainWindow):
         self.course_detail_mgr = None  # Lazy init
         self.auto_detail_mgr = None    # Lazy init
         self.learn_sitting_widget = None  # LearnSittingWidget for Textbook
+        self.mission_control = MissionControl()  # Global task manager
 
         # === STATE ===
         self.history_mode = False
@@ -128,16 +130,12 @@ class CanvasApp(QMainWindow):
     # === STATUS & UPDATES ===
     def check_status(self):
         """Initial status check + auto-fix"""
-        mt = self.main_window.consoleTabWidget.widget(0)
-        console = mt.findChild(self.main_window.consoleOutput.__class__) if mt else None
-
         # Check cookie expiry
         if os.path.exists(config.COOKIES_FILE):
             cookie_age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(config.COOKIES_FILE))
             if cookie_age > timedelta(hours=24):
-                if console:
-                    console.append("[INFO] Cookies expired, auto-refreshing...")
-                utilQtInteract.on_get_cookie_clicked(self.main_window.consoleTabWidget)
+                print("[INFO] Cookies expired, auto-refreshing...")
+                utilQtInteract.on_get_cookie_clicked(None, self)
 
         self.update_status()
         self.update_user_info()
@@ -145,18 +143,15 @@ class CanvasApp(QMainWindow):
         # Auto-fetch data
         status = checkStatus.get_all_status()
         if status['cookie'] == 1:
-            if console:
-                console.append("[INFO] Cookie valid, checking data...")
+            print("[INFO] Cookie valid, checking data...")
 
             if status['courses'] == 0:
-                if console:
-                    console.append("[INFO] Fetching courses...")
-                utilQtInteract.on_get_course_clicked(self.main_window.consoleTabWidget, self)
+                print("[INFO] Fetching courses...")
+                utilQtInteract.on_get_course_clicked(None, self)
 
-            # Always fetch TODOs on startup
-            if console:
-                console.append("[INFO] Auto-fetching todos...")
-            utilQtInteract.on_get_todo_clicked(self.main_window.consoleTabWidget, self)
+            # Always fetch TODOs on startup (via Mission Control)
+            print("[INFO] Auto-fetching todos...")
+            utilQtInteract.on_get_todo_clicked(None, self)
 
         # Start status update daemon
         threading.Thread(target=self._status_update_daemon, daemon=True).start()
@@ -278,6 +273,16 @@ class CanvasApp(QMainWindow):
         if obj == self.main_window and event.type() == QEvent.Type.Resize:
             self.launcher_handler.update_geometry()
             return False
+
+        # Ctrl+M: Toggle Mission Control
+        if event.type() == QEvent.Type.KeyPress:
+            if event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_M:
+                if self.mission_control.isVisible():
+                    self.mission_control.hide()
+                else:
+                    self.mission_control.show()
+                    self.mission_control.raise_()
+                return True
 
         # Delegate all other events to keyboard handler
         return self.keyboard_handler.handle_event(obj, event)

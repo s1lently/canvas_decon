@@ -30,14 +30,14 @@ This file provides essential guidance for Claude Code and other AI assistants wh
 
 ```
 main.py → gui/qt.py (CanvasApp - 227 lines, 87% reduction)
-    ├─> 6 Windows + Floating Sidebar
+    ├─> 6 Windows + Floating Sidebar + Mission Control (task progress UI)
     ├─> qt_utils/ (Modular Architecture)
     │   ├─> window_handlers/ (7 handlers: Main, Launcher, Auto, etc.)
     │   ├─> event_handlers/ (Keyboard)
     │   ├─> content_processors/ (HTML, TabLoader, Preview)
     │   └─> initializers/ (UI, Signal)
-    ├─> Managers (mgr prefix): mgrData, mgrDone, mgrCourseDetail, mgrAutoDetail
-    ├─> func/ (get/proc/util prefix): getTodos, getHomework, getQuiz_ultra, utilPromptFiles
+    ├─> Managers (mgr prefix): mgrData, mgrDone, mgrTask, mgrCourseDetail, mgrAutoDetail
+    ├─> func/ (get/proc/util prefix): getTodos, getHomework, getQuiz_ultra, utilPromptFiles, utilProgress
     └─> misc/jsons/ (cookies.json, todos.json, course.json, his_todo.json)
 ```
 
@@ -628,16 +628,16 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         # Process result
 ```
 
-**Real-time Status Callbacks**
-Pass a callback to deep logic functions to stream status updates to the UI without coupling.
+**Real-time Status Callbacks (Mission Control Pattern)**
+Pass TaskProgress callback to backend functions for UI updates without coupling. See `func/utilProgress.py`.
 ```python
-# In GUI Handler
-status_cb = lambda msg: console.append(msg)
-call_ai(..., status_callback=status_cb)
+# In GUI Handler (via Mission Control)
+def run_task(progress):  # progress: TaskProgress with update()/finish() methods
+    progress.update(progress=50, status="Processing...")
+    progress.finish("Done!")
+app.mission_control.start_task("Task Name", run_task)
 
-# In Logic Function
-if status_callback:
-    status_callback("Waiting for rate limit...")
+# Legacy pattern (deprecated): status_callback=lambda msg: console.append(msg)
 ```
 
 ### 8. Drag & Drop Pattern (PyQt6)
@@ -778,12 +778,12 @@ gui/qt.py                       # 227-line router
 gui/core/                       # Base: mgrData, mgrDone, mgrTask, utilQtInteract
 gui/details/                    # Detail managers: mgrAutoDetail, mgrCourseDetail
 gui/learn/                      # Learn system: cfgLearnPrefs, rdrLearnSitting, utilFormatters
-gui/widgets/                    # UI: wgtSidebar, wgtIOSToggle, rdrDelegates, rdrToast, wgtProgress
+gui/widgets/                    # UI: wgtSidebar, wgtIOSToggle, wgtMissionControl, rdrDelegates, rdrToast
 gui/config/                     # Config: cfgModel, cfgStyles
 gui/qt_utils/                   # Handlers: window_handlers/, event_handlers/, initializers/
 
 # Business Logic
-func/                           # getTodos, getCourses, getHomework, getQuiz_ultra, getQuizStatus, utilPromptFiles
+func/                           # getTodos, getCourses, getHomework, getQuiz_ultra, getQuizStatus, utilPromptFiles, utilProgress
 login/                          # getCookie, getTotp
 misc/jsons/                     # Runtime data: todos.json, cookies.json, course.json
 ```

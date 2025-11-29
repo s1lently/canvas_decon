@@ -6,6 +6,7 @@ from PyQt6.uic import loadUi
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from gui.widgets.wgtIOSToggle import IOSToggle
 from gui.widgets.wgtSidebar import GlobalSidebar
+from gui.widgets.wgtAutoDetailModern import ModernAutoDetailWidget
 from gui.widgets import rdrDelegates as delegates
 
 
@@ -25,16 +26,24 @@ class UIInitializer:
     @staticmethod
     def init_qt(app):
         """Initialize Qt UI: Load windows + create widgets"""
-        # Create stacked widget (full width, no sidebar in layout)
+        # Create container with right margin for sidebar (70px collapsed)
+        from PyQt6.QtWidgets import QWidget, QVBoxLayout
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 70, 0)  # Right margin for sidebar
+        container_layout.setSpacing(0)
+
+        # Create stacked widget inside container
         app.stacked_widget = QStackedWidget()
-        app.setCentralWidget(app.stacked_widget)
+        container_layout.addWidget(app.stacked_widget)
+        app.setCentralWidget(container)
 
         # Load UI files (support both dev and PyInstaller)
         app.main_window = loadUi(get_resource_path('gui/ui/main.ui'))
         # app.sitting_window = loadUi(get_resource_path('gui/ui/sitting.ui')) # Removed: Replaced by overlay
         app.automation_window = loadUi(get_resource_path('gui/ui/automation.ui'))
         app.course_detail_window = loadUi(get_resource_path('gui/ui/course_detail.ui'))
-        app.auto_detail_window = loadUi(get_resource_path('gui/ui/autoDetail.ui'))
+        app.auto_detail_window = ModernAutoDetailWidget()  # Modern Python widget
         app.launcher_overlay = loadUi(get_resource_path('gui/ui/launcher.ui'))
         app.settings_overlay = loadUi(get_resource_path('gui/ui/settings_overlay.ui'))
 
@@ -55,22 +64,9 @@ class UIInitializer:
                    app.automation_window.automatableCloseDetailView,
                    app.automation_window.automatableDetailView,
                    app.automation_window.allItemsDetailView,
-                   app.course_detail_window.detailView,
-                   app.auto_detail_window.assignmentDetailView,
-                   app.auto_detail_window.refFilesView,
-                   app.auto_detail_window.aiPreviewView]:
+                   app.course_detail_window.detailView]:
             dv.setOpenExternalLinks(True)
-
-        # Create IOSToggle widgets
-        app.ios_toggle_main = IOSToggle(width=50, height=24)
-        app.main_window.categoryColumnLayout.addWidget(app.ios_toggle_main)
-
-        app.ios_toggles_auto = [IOSToggle(width=50, height=24) for _ in range(4)]
-        for toggle, layout in zip(app.ios_toggles_auto, [
-            'automatableOpenCategoryLayout', 'automatableCloseCategoryLayout',
-            'automatableCategoryLayout', 'allItemsCategoryLayout'
-        ]):
-            getattr(app.automation_window, layout).addWidget(toggle)
+        # Note: auto_detail_window uses ModernAutoDetailWidget which sets external links internally
 
         # Enable drag-and-drop for course detail
         app.course_detail_window.itemList.setAcceptDrops(True)
@@ -87,15 +83,18 @@ class UIInitializer:
         app.main_window.historyToggleLayout.addWidget(app.history_toggle)
         app.history_toggle.setChecked(False)
 
-        # Thinking toggle (for AutoDetail)
+        # Thinking toggle (for AutoDetail - ModernAutoDetailWidget)
         app.thinking_toggle = IOSToggle(width=50, height=24)
         app.thinking_toggle.setChecked(True)
+        # Replace placeholder in thinkingToggleWidget
         placeholder = app.auto_detail_window.thinkingTogglePlaceholder
-        layout = placeholder.parent().layout()
-        idx = layout.indexOf(placeholder)
-        layout.removeWidget(placeholder)
-        placeholder.deleteLater()
-        layout.insertWidget(idx, app.thinking_toggle)
+        if placeholder and placeholder.parent():
+            layout = placeholder.parent().layout()
+            if layout:
+                idx = layout.indexOf(placeholder)
+                layout.removeWidget(placeholder)
+                placeholder.deleteLater()
+                layout.insertWidget(idx, app.thinking_toggle)
 
         # Manual 2FA mode toggle (for Settings Overlay)
         app.manual_mode_toggle = IOSToggle(width=50, height=24)

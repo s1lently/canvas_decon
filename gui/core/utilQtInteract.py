@@ -1,107 +1,9 @@
 """UI Interaction Logic for Canvas LMS Automation"""
 import os, sys, json, threading, requests
-from PyQt6.QtCore import Qt, QMetaObject, Q_ARG
+from PyQt6.QtCore import Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
 
-
-class ThreadSafeConsole:
-    """Thread-safe wrapper for QTextEdit console"""
-    def __init__(self, console_widget):
-        self.console = console_widget
-
-    def append(self, text):
-        """Thread-safe append to console"""
-        # Use Qt's invokeMethod to safely call from any thread
-        QMetaObject.invokeMethod(
-            self.console,
-            "append",
-            Qt.ConnectionType.QueuedConnection,
-            Q_ARG(str, str(text))
-        )
-
-def _create_console_tab(tw, name, with_progress=False):
-    """Create console tab with optional progress widget
-
-    Args:
-        tw: QTabWidget
-        name: Tab name
-        with_progress: If True, include progress bar widget
-
-    Returns:
-        ThreadSafeConsole wrapper if with_progress=False
-        tuple (ThreadSafeConsole, progress_widget) if with_progress=True
-    """
-    if with_progress:
-        from gui.widgets.wgtProgress import create_console_with_progress
-        console_widget, progress_widget = create_console_with_progress(tw, name)
-        return ThreadSafeConsole(console_widget), progress_widget
-    else:
-        # Legacy: plain console tab
-        from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTextEdit
-        tab, layout, console = QWidget(), QVBoxLayout(), QTextEdit()
-        console.setReadOnly(True)
-        console.setStyleSheet("background-color: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 11px;")
-        layout.addWidget(console)
-        tab.setLayout(layout)
-        tw.setCurrentIndex(tw.addTab(tab, name))
-        return ThreadSafeConsole(console)
-
-def _run_in_thread(func, console, name, on_success=None, task_id=None):
-    """Execute in daemon thread with task management
-
-    Args:
-        func: Function to run (receives console and stop_event)
-        console: Console object
-        name: Task name
-        on_success: Callback on success
-        task_id: Unique task ID (defaults to thread name)
-    """
-    from gui.core.mgrTask import get_task_manager
-
-    console.append(f"[INFO] {name} started")
-
-    # Create stop event
-    stop_event = threading.Event()
-
-    def wrapper():
-        tid = task_id or threading.current_thread().name
-        try:
-            console.append(f"[INFO] Starting {name}...")
-
-            # Check if function accepts stop_event parameter
-            import inspect
-            sig = inspect.signature(func)
-            if 'stop_event' in sig.parameters:
-                func(console, stop_event=stop_event)
-            else:
-                func(console)
-
-            # Check if stopped
-            if stop_event.is_set():
-                console.append(f"[WARNING] {name} stopped by user")
-            else:
-                console.append(f"[SUCCESS] {name} completed")
-                if on_success:
-                    on_success()
-        except Exception as e:
-            if not stop_event.is_set():  # Don't show error if stopped
-                import traceback
-                console.append(f"[ERROR] {name} failed: {e}")
-                console.append(traceback.format_exc())
-        finally:
-            # Unregister task
-            get_task_manager().unregister_task(tid)
-
-    # Start thread
-    thread = threading.Thread(target=wrapper, daemon=True, name=task_id)
-    thread.start()
-
-    # Register task
-    tid = task_id or thread.name
-    get_task_manager().register_task(tid, name, thread, stop_event, console)
-
-    return tid  # Return task ID for tracking
 
 def on_login_clicked(main_window, stacked_widget, login_window, app_instance=None):
     stacked_widget.setCurrentWidget(login_window)
@@ -111,99 +13,151 @@ def on_login_clicked(main_window, stacked_widget, login_window, app_instance=Non
 
 
 def on_get_cookie_clicked(tw, mw=None):
-    """Execute getCookie"""
-    def run(c):
-        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        from login.getCookie import main as get_cookie_main
-        get_cookie_main()
-    _run_in_thread(run, _create_console_tab(tw, "Get Cookie"), "getCookie", lambda: mw.update_status() if mw else None)
+    """Execute getCookie via Mission Control"""
+    if not mw or not hasattr(mw, 'mission_control'):
+        print("[ERROR] Mission Control not available")
+        return
+
+    def run(progress):
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'login')))
+        from getCookie import main
+        main(progress=progress)
+
+    def on_success():
+        if mw:
+            mw.update_status()
+            mw.show_toast("Cookie Updated!", 'success')
+
+    mw.mission_control.start_task("Getting Cookie", run, on_success=on_success)
 
 def on_get_todo_clicked(tw, mw=None):
-    """Execute getTodos and getHistoryTodos in parallel"""
-    def run_todos(c):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    """Execute getTodos and getHistoryTodos via Mission Control"""
+    if not mw or not hasattr(mw, 'mission_control'):
+        print("[ERROR] Mission Control not available")
+        return
+
+    mc = mw.mission_control
+
+    # Task 1: Fetch TODOs
+    def run_todos(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
         from getTodos import main
-        c.append("[INFO] Fetching upcoming TODOs...")
-        main()
-        c.append("[SUCCESS] Upcoming TODOs fetched")
+        main(progress=progress)
 
-    def run_history(c):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from getHistoryTodos import main
-        c.append("[INFO] Fetching historical TODOs...")
-        main()
-        c.append("[SUCCESS] Historical TODOs fetched")
-
-    def success():
+    def on_todos_success():
         if mw:
             mw.main_handler.load_data()
             mw.main_handler.on_category_changed(mw.main_window.categoryList.currentRow())
-            mw.show_toast("TODOs 获取完成！", 'success')
+            mw.show_toast("TODOs Updated!", 'success')
 
-    # Launch both threads
-    _run_in_thread(run_todos, _create_console_tab(tw, "Get TODO"), "getTodos", success)
-    _run_in_thread(run_history, _create_console_tab(tw, "Get History"), "getHistoryTodos")
+    # Task 2: Fetch History
+    def run_history(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
+        from getHistoryTodos import main
+        main(progress=progress)
+
+    def on_history_success():
+        if mw:
+            mw.show_toast("History Updated!", 'success')
+
+    # Start both tasks in parallel
+    mc.start_task("Fetching TODOs", run_todos, on_success=on_todos_success)
+    mc.start_task("Fetching History", run_history, on_success=on_history_success)
 
 def on_get_course_clicked(tw, mw=None):
-    """Execute getCourses"""
-    def run(c):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    """Execute getCourses via Mission Control"""
+    if not mw or not hasattr(mw, 'mission_control'):
+        print("[ERROR] Mission Control not available")
+        return
+
+    def run(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
         from getCourses import main
-        main()
-        c.append("✓ Courses saved")
-    def success():
+        main(progress=progress)
+
+    def on_success():
         if mw:
             mw.main_handler.load_data()
             mw.update_status()
-            mw.show_toast("Courses 获取完成！", 'success')
-    _run_in_thread(run, _create_console_tab(tw, "Get Courses"), "getCourses", success)
+            mw.show_toast("Courses Updated!", 'success')
+
+    mw.mission_control.start_task("Fetching Courses", run, on_success=on_success)
 
 
-def on_gsyll_all_clicked(tw):
-    """Execute getSyll.py for all courses"""
-    def run(c):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-        from getSyll import run_extraction_for_course, logger
+def on_gsyll_all_clicked(tw, mw=None):
+    """Execute getSyll.py for all courses via Mission Control"""
+    if not mw or not hasattr(mw, 'mission_control'):
+        print("[ERROR] Mission Control not available")
+        return
+
+    def run(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
+        from getSyll import run_extraction_for_course
         import json
 
-        # Read courses
+        progress.update(progress=0, status="Reading courses...")
         with open(config.COURSE_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             courses = data.get('courses', data) if isinstance(data, dict) else data
 
-        c.append(f"[INFO] Found {len(courses)} courses to process")
+        total = len(courses)
+        progress.update(progress=10, status=f"Processing {total} courses...")
+        print(f"Found {total} courses to process")
 
         # Run extraction for each course
-        from concurrent.futures import ThreadPoolExecutor
+        from concurrent.futures import ThreadPoolExecutor, as_completed
+        results = []
         with ThreadPoolExecutor(max_workers=5) as executor:
-            results = [r for r in executor.map(run_extraction_for_course, courses) if r[0]]
+            futures = {executor.submit(run_extraction_for_course, c): c for c in courses}
+            completed = 0
+            for future in as_completed(futures):
+                r = future.result()
+                if r[0]:
+                    results.append(r)
+                completed += 1
+                pct = 10 + int(completed / total * 85)
+                progress.update(progress=pct, status=f"Processed {completed}/{total}")
 
-        c.append("\n--- Syllabus Extraction Summary ---")
         found_count = sum(1 for _, s in results if s)
-        for name, successes in sorted(results):
-            status = f"[SUCCESS] {name}: Found via {', '.join(sorted(set(successes)))}" if successes else f"[ FAIL  ] {name}: No syllabus found."
-            c.append(status)
-        c.append(f"\nSummary: Found syllabus for {found_count} out of {len(results)} courses.")
-    _run_in_thread(run, _create_console_tab(tw, "Get Syllabus All"), "gSyllAll")
+        progress.finish(f"Found {found_count}/{len(results)} syllabi")
+        print(f"Summary: Found syllabus for {found_count} out of {len(results)} courses.")
 
-def on_clean_clicked(tw):
-    """Execute clean.py"""
-    def run(c):
-        from io import StringIO
-        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-        from clean import preview_deletion, clean_directory, build_tree, print_tree
+    def on_success():
+        if mw:
+            mw.show_toast("Syllabus Updated!", 'success')
+
+    mw.mission_control.start_task("Get All Syllabi", run, on_success=on_success)
+
+def on_clean_clicked(tw, mw=None):
+    """Execute clean.py via Mission Control"""
+    if not mw or not hasattr(mw, 'mission_control'):
+        print("[ERROR] Mission Control not available")
+        return
+
+    def run(progress):
+        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+        from clean import preview_deletion, clean_directory
+
+        progress.update(progress=10, status="Scanning files...")
         td = preview_deletion()
-        if not td: return c.append("✓ No files to clean")
-        c.append(f"Found {len(td)} files:\n")
-        to = StringIO()
-        old = sys.stdout
-        sys.stdout = to
-        print_tree(build_tree(td))
-        sys.stdout = old
-        c.append(to.getvalue())
-        c.append("\n[INFO] Auto-confirming cleanup...")
+        if not td:
+            progress.finish("No files to clean")
+            print("✓ No files to clean")
+            return
+
+        progress.update(progress=30, status=f"Found {len(td)} files")
+        print(f"Found {len(td)} files to clean")
+
+        progress.update(progress=50, status="Cleaning...")
         clean_directory(td)
-    _run_in_thread(run, _create_console_tab(tw, "Clean"), "Clean")
+        progress.finish(f"Cleaned {len(td)} files")
+        print(f"✓ Cleaned {len(td)} files")
+
+    def on_success():
+        if mw:
+            mw.show_toast("Clean Complete!", 'success')
+
+    mw.mission_control.start_task("Cleaning Files", run, on_success=on_success)
 
 def on_back_clicked(sw, mw):
     sw.setCurrentWidget(mw)
@@ -298,55 +252,46 @@ def update_user_info_labels(el, nl, il):
 
 
 def on_load_from_decon_clicked(canvas_app, console_widget=None):
-    """Load decon chapter PDFs to Learn directory
-
-    Args:
-        canvas_app: CanvasApp instance
-        console_widget: Optional QTabWidget for console output (defaults to main_window console)
-    """
+    """Load decon chapter PDFs to Learn directory via Mission Control"""
     if not canvas_app.course_detail_mgr:
+        return
+    if not hasattr(canvas_app, 'mission_control'):
+        print("[ERROR] Mission Control not available")
         return
 
     # Extract data in main thread
     course_dir = canvas_app.course_detail_mgr.course_dir
     course_name = canvas_app.course_detail_mgr.get_course_name()
 
-    # Create console in main thread
-    if console_widget is None:
-        console_widget = canvas_app.main_window.consoleTabWidget
-    console = _create_console_tab(console_widget, "Load From Decon")
-
-    def run(console):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    def run(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
         from procLearnMaterial import load_from_decon
 
-        console.append(f"{'='*80}")
-        console.append(f"📚 Load From Decon: {course_name}")
-        console.append(f"{'='*80}\n")
+        progress.update(progress=10, status=f"Loading from {course_name}...")
+        print(f"📚 Load From Decon: {course_name}")
 
-        copied_files = load_from_decon(course_dir, console)
+        copied_files = load_from_decon(course_dir, None)  # Pass None for console
 
         if copied_files:
-            console.append(f"\n✅ Successfully loaded {len(copied_files)} chapters to Learn")
-            # Trigger UI refresh
+            progress.finish(f"Loaded {len(copied_files)} chapters")
+            print(f"✅ Successfully loaded {len(copied_files)} chapters")
             canvas_app.course_detail_signal.refresh_category.emit()
-            # Show toast
-            canvas_app.show_toast(f"已加载 {len(copied_files)} 个章节！", 'success')
         else:
-            console.append("\n! No files loaded")
+            progress.finish("No files loaded")
+            print("! No files loaded")
 
-    # Console already created above
-    _run_in_thread(run, console, "Load From Decon")
+    def on_success():
+        canvas_app.show_toast("Chapters Loaded!", 'success')
+
+    canvas_app.mission_control.start_task("Load From Decon", run, on_success=on_success)
 
 
 def on_learn_material_clicked(canvas_app, console_widget=None):
-    """Generate AI learning report for selected file
-
-    Args:
-        canvas_app: CanvasApp instance
-        console_widget: Optional QTabWidget for console output (defaults to main_window console)
-    """
+    """Generate AI learning report for selected file via Mission Control"""
     if not canvas_app.course_detail_mgr:
+        return
+    if not hasattr(canvas_app, 'mission_control'):
+        print("[ERROR] Mission Control not available")
         return
 
     # Get selected item from Learn category
@@ -372,8 +317,7 @@ def on_learn_material_clicked(canvas_app, console_widget=None):
     filename = os.path.basename(file_path)
 
     # Get default prompt from preferences or fall back to built-in default
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'gui'))
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
     from procLearnMaterial import get_default_prompt
     from gui.learn.cfgLearnPrefs import get_prompt
 
@@ -395,67 +339,35 @@ def on_learn_material_clicked(canvas_app, console_widget=None):
     from PyQt6.QtWidgets import QInputDialog
     prompt, ok = QInputDialog.getMultiLineText(
         cdw,
-        "Edit Learning Prompt (编辑学习提示词)",
+        "Edit Learning Prompt",
         f"Customize AI prompt for: {filename}\n\n"
-        f"💡 Tip: Leave unchanged to use saved preferences\n\n"
-        f"Available placeholders:\n"
-        "  {{filename}} - File name\n"
-        "  {{file_type}} - File type (for text files)\n"
-        "  {{content}} - File content (for text files)\n"
-        "  {{csv_preview}} - CSV preview (for CSV files)",
+        f"Tip: Leave unchanged to use saved preferences",
         default_prompt
     )
 
     if not ok:
         return  # User cancelled
 
-    # If user cleared the prompt, use None to trigger preference loading in learn_material
     custom_prompt = prompt.strip() if prompt.strip() else None
 
-    # Create console in main thread
-    if console_widget is None:
-        console_widget = canvas_app.main_window.consoleTabWidget
-    console = _create_console_tab(console_widget, f"Learn: {filename}")
-
-    def run(console):
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+    def run(progress):
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
         from procLearnMaterial import learn_material
 
-        console.append(f"{'='*80}")
-        console.append(f"📚 Learn: {filename}")
-        console.append(f"Course: {course_name}")
-        console.append(f"{'='*80}\n")
+        progress.update(progress=10, status=f"Processing {filename}...")
+        print(f"📚 Learn: {filename} | Course: {course_name}")
 
-        report_path = learn_material(file_path, course_dir, console, custom_prompt=custom_prompt, use_preferences=True)
+        report_path = learn_material(file_path, course_dir, None, custom_prompt=custom_prompt, use_preferences=True)
 
         if report_path:
-            console.append(f"\n{'='*80}")
-            console.append(f"✅ Learning report generated successfully!")
-            console.append(f"📄 Report: {report_path}")
-            console.append(f"{'='*80}")
-
-            # Display report preview in console
-            console.append(f"\n📖 Report Preview:")
-            console.append("=" * 80)
-            try:
-                with open(report_path, 'r', encoding='utf-8') as f:
-                    report_content = f.read()
-                    # Show first 1000 chars
-                    preview = report_content[:1000]
-                    if len(report_content) > 1000:
-                        preview += "\n\n... (truncated, see full report at path above)"
-                    console.append(preview)
-            except Exception as e:
-                console.append(f"! Could not read report: {e}")
-            console.append("=" * 80)
-
-            # Trigger UI refresh to show report indicator
+            progress.finish("Report generated!")
+            print(f"✅ Report: {report_path}")
             canvas_app.course_detail_signal.refresh_category.emit()
-            # Show toast
-            canvas_app.show_toast(f"Learn 报告生成完成！", 'success')
         else:
-            console.append("\n✗ Failed to generate learning report")
-            canvas_app.show_toast("Learn 生成失败", 'error')
+            progress.fail("Failed to generate report")
+            print("✗ Failed to generate learning report")
 
-    # Console already created above, just run thread
-    _run_in_thread(run, console, f"Learn: {filename}")
+    def on_success():
+        canvas_app.show_toast("Learn Report Done!", 'success')
+
+    canvas_app.mission_control.start_task(f"Learn: {filename}", run, on_success=on_success)

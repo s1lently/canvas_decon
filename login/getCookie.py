@@ -25,19 +25,34 @@ def human_type(element, text):
 def human_click(driver, element):
     ActionChains(driver).move_to_element(element).pause(random.uniform(0.1, 0.3)).click().perform()
 
-def get_cookies(account, password, otp_key):
+def get_cookies(account, password, otp_key, progress=None):
+    """Get cookies via Selenium login
+
+    Args:
+        progress: TaskProgress instance (optional)
+    """
+    if progress:
+        progress.update(progress=5, status="Starting browser...")
+    print("Starting browser...")
+
     options = webdriver.ChromeOptions()
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     # options.add_argument('--headless')
     driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=options)
     try:
+        if progress:
+            progress.update(progress=10, status="Loading login page...")
         driver.get("https://psu.instructure.com/login")
         wait = WebDriverWait(driver, 30)
 
+        if progress:
+            progress.update(progress=20, status="Entering account...")
         human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='email']"))), account)
         human_click(driver, driver.find_element(By.CSS_SELECTOR, "input[type='submit']"))
 
+        if progress:
+            progress.update(progress=30, status="Entering password...")
         human_type(wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[type='password']"))), password)
         human_click(driver, driver.find_element(By.CSS_SELECTOR, "input[type='submit']"))
 
@@ -46,6 +61,8 @@ def get_cookies(account, password, otp_key):
 
         if manual_mode:
             # Manual 2FA mode: User completes 2FA themselves
+            if progress:
+                progress.update(progress=40, status="Manual 2FA - complete in browser")
             print("\n" + "="*80)
             print("MANUAL 2FA MODE ENABLED")
             print("="*80)
@@ -57,12 +74,16 @@ def get_cookies(account, password, otp_key):
             try:
                 wait_long = WebDriverWait(driver, 300)  # 5 minutes timeout
                 wait_long.until(EC.presence_of_element_located((By.ID, "dashboard")))
+                if progress:
+                    progress.update(progress=80, status="Dashboard detected!")
                 print("[SUCCESS] Login completed! Dashboard detected.")
                 sso_success = True
             except TimeoutException:
                 raise Exception("Timed out waiting for manual 2FA completion (5 minutes)")
         else:
             # Automatic 2FA mode with TOTP
+            if progress:
+                progress.update(progress=40, status="Waiting for 2FA page...")
             start_time = time.time()
             while time.time() - start_time < 30:
                 if "I can't use my Microsoft Authenticator" in driver.page_source:
@@ -82,6 +103,8 @@ def get_cookies(account, password, otp_key):
 
             sso_success = False
             for attempt in range(3):
+                if progress:
+                    progress.update(progress=50 + attempt * 10, status=f"TOTP attempt {attempt+1}/3...")
                 token = getTotp.generate_token(otp_key) # Pass the key string directly
                 if not token:
                     time.sleep(5)
@@ -114,6 +137,8 @@ def get_cookies(account, password, otp_key):
             if not sso_success:
                 raise Exception("SSO submission failed after 3 retries.")
         
+        if progress:
+            progress.update(progress=85, status="Getting cookies...")
         cookies = driver.get_cookies()
         return cookies
     except Exception as e:
@@ -123,17 +148,30 @@ def get_cookies(account, password, otp_key):
     finally:
         driver.quit()
 
-def main():
-    """Main function to get cookies and save to cookies.json"""
+
+def main(progress=None):
+    """Main function to get cookies and save to cookies.json
+
+    Args:
+        progress: TaskProgress instance (optional)
+    """
+    if progress:
+        progress.update(progress=0, status="Reading config...")
     # Read account info
     try:
         with open(config.ACCOUNT_INFO_FILE, 'r', encoding='utf-8') as f:
             account_info = json.load(f)
     except FileNotFoundError:
-        print(f"Error: {config.ACCOUNT_INFO_FILE} not found")
+        err = f"{config.ACCOUNT_INFO_FILE} not found"
+        if progress:
+            progress.fail(err)
+        print(f"Error: {err}")
         return
     except json.JSONDecodeError:
-        print(f"Error: Invalid JSON in {config.ACCOUNT_INFO_FILE}")
+        err = f"Invalid JSON in {config.ACCOUNT_INFO_FILE}"
+        if progress:
+            progress.fail(err)
+        print(f"Error: {err}")
         return
 
     # Extract credentials
@@ -142,7 +180,10 @@ def main():
     otp_key = account_info.get('otp_key')
 
     if not all([account, password, otp_key]):
-        print("Error: Missing required fields in account_info.json (account, password, otp_key)")
+        err = "Missing required fields (account, password, otp_key)"
+        if progress:
+            progress.fail(err)
+        print(f"Error: {err}")
         return
 
     if otp_key == "loginself":
@@ -151,15 +192,23 @@ def main():
         print(f"Logging in with account: {account}")
 
     # Get cookies
-    cookies = get_cookies(account, password, otp_key)
+    cookies = get_cookies(account, password, otp_key, progress=progress)
 
     if cookies:
         # Save cookies to file
+        if progress:
+            progress.update(progress=95, status="Saving cookies...")
         with open(config.COOKIES_FILE, 'w', encoding='utf-8') as f:
             json.dump(cookies, f, indent=2)
+        if progress:
+            progress.finish("Cookies saved!")
         print(f"Cookies saved successfully to {config.COOKIES_FILE}")
     else:
-        print("Failed to get cookies")
+        err = "Failed to get cookies"
+        if progress:
+            progress.fail(err)
+        print(err)
+
 
 if __name__ == "__main__":
     main()

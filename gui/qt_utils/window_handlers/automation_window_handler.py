@@ -129,9 +129,3 @@ class AutomationWindowHandler(BaseHandler):
             self.app.auto_detail_mgr = AutoDetailManager(todo)
             self.app.auto_detail_handler.populate_window()
             self.stacked_widget.setCurrentWidget(self.auto_detail_window)
-
-    def close_tab(self, index):
-        """Close console tab in Automation window"""
-        if index > 0:
-            self.app.main_handler.stop_task_for_tab(self.automation_window.consoleTabWidget, index)
-            self.automation_window.consoleTabWidget.removeTab(index)

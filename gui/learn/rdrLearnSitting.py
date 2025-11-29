@@ -537,10 +537,12 @@ class LearnSittingWidget(QWidget):
             show_toast(self.canvas_app, "Failed to refresh models", 'error', 3000)
 
     def on_batch_generate(self):
-        # (Logic identical to previous, simplified for brevity)
-        # Re-using existing batch logic structure
+        """Batch generate learning reports via Mission Control"""
         from PyQt6.QtWidgets import QMessageBox
-        import threading
+
+        if not hasattr(self.canvas_app, 'mission_control'):
+            print("[ERROR] Mission Control not available")
+            return
 
         learn_dir = self.course_detail_mgr.get_learn_dir()
         reports_dir = os.path.join(learn_dir, 'reports')
@@ -562,39 +564,48 @@ class LearnSittingWidget(QWidget):
             QMessageBox.information(self, "All Done", "All files already have learning reports!")
             return
 
-        reply = QMessageBox.question(self, "Batch Generate", f"Generate reports for {len(files)} files?", 
+        reply = QMessageBox.question(self, "Batch Generate", f"Generate reports for {len(files)} files?",
                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply != QMessageBox.StandardButton.Yes: return
+        if reply != QMessageBox.StandardButton.Yes:
+            return
 
-        from gui.core.utilQtInteract import _create_console_tab
-        console = _create_console_tab(self.canvas_app.main_window.consoleTabWidget, "Batch Learn")
+        # Capture values for the closure
+        course_dir = self.course_detail_mgr.course_dir
+        reload_callback = self.reload_files_async
 
-        def run_batch():
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+        def run_batch(progress):
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
             from procLearnMaterial import learn_material
-            
-            console.append(f"🚀 Batch Learn: {len(files)} files")
+
+            progress.update(progress=0, status=f"Processing {len(files)} files...")
+            print(f"🚀 Batch Learn: {len(files)} files")
             success_count = 0
             failed_files = []
 
             for i, (filename, file_path) in enumerate(files, 1):
-                console.append(f"[{i}/{len(files)}] Processing: {filename}")
+                pct = int((i - 1) / len(files) * 95)
+                progress.update(progress=pct, status=f"[{i}/{len(files)}] {filename}")
+                print(f"[{i}/{len(files)}] Processing: {filename}")
                 try:
-                    if learn_material(file_path, self.course_detail_mgr.course_dir, console, use_preferences=True):
+                    if learn_material(file_path, course_dir, None, use_preferences=True):
                         success_count += 1
                     else:
                         failed_files.append(filename)
                 except Exception as e:
                     failed_files.append(filename)
-                    console.append(f"Error: {e}")
+                    print(f"Error: {e}")
 
-            from gui.widgets.rdrToast import show_toast
-            show_toast(self.canvas_app, f"Completed: {success_count} success", 'success', 5000)
-            
+            progress.finish(f"Done: {success_count}/{len(files)} success")
+            print(f"✓ Batch Learn complete: {success_count}/{len(files)} success")
+
             # Safe UI update
-            QTimer.singleShot(0, self.reload_files_async)
+            QTimer.singleShot(0, reload_callback)
 
-        threading.Thread(target=run_batch, daemon=True).start()
+        def on_success():
+            from gui.widgets.rdrToast import show_toast
+            show_toast(self.canvas_app, "Batch Learn Complete!", 'success', 3000)
+
+        self.canvas_app.mission_control.start_task("Batch Learn", run_batch, on_success=on_success)
 
     def on_prompt_type_changed(self, index):
         prompt_types = ['text', 'pdf', 'csv']
@@ -604,7 +615,7 @@ class LearnSittingWidget(QWidget):
         if custom_prompt:
             self.prompt_editor.setPlainText(custom_prompt)
         else:
-            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+            sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
             from procLearnMaterial import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
             defaults = {'text': DEFAULT_TEXT_PROMPT, 'pdf': DEFAULT_PDF_PROMPT, 'csv': DEFAULT_CSV_PROMPT}
             self.prompt_editor.setPlainText(defaults.get(prompt_type, ""))
@@ -613,8 +624,8 @@ class LearnSittingWidget(QWidget):
         prompt_types = ['text', 'pdf', 'csv']
         prompt_type = prompt_types[self.prompt_type_combo.currentIndex()]
         prompt_text = self.prompt_editor.toPlainText().strip()
-        
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'func'))
+
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
         from procLearnMaterial import DEFAULT_TEXT_PROMPT, DEFAULT_PDF_PROMPT, DEFAULT_CSV_PROMPT
         defaults = {'text': DEFAULT_TEXT_PROMPT, 'pdf': DEFAULT_PDF_PROMPT, 'csv': DEFAULT_CSV_PROMPT}
 

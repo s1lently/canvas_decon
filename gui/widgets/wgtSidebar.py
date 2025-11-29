@@ -297,50 +297,27 @@ class GlobalSidebar(QWidget):
     def _get_default_tools(self):
         """Default tool actions (simple version, extensible for future)"""
         from gui.core import utilQtInteract as qt_interact
-        from gui.widgets.wgtIOSToggle import IOSToggle
-
-        # Create console toggle for sidebar
-        if not hasattr(self.app, 'sidebar_console_toggle'):
-            self.app.sidebar_console_toggle = IOSToggle(width=35, height=18)
-            # Connect to console toggle handler
-            self.app.sidebar_console_toggle.stateChanged.connect(
-                self.app.main_handler.on_toggle_console_clicked
-            )
 
         return [
             {
-                'type': 'toggle',
-                'icon': '💬',
-                'text': 'Console',
-                'widget': self.app.sidebar_console_toggle
-            },
-            {
                 'icon': '🍪',
                 'text': 'Get Cookie',
-                'callback': lambda: qt_interact.on_get_cookie_clicked(
-                    self.app.main_window.consoleTabWidget, self.app
-                )
+                'callback': lambda: qt_interact.on_get_cookie_clicked(None, self.app)
             },
             {
                 'icon': '📝',
                 'text': 'Get TODO',
-                'callback': lambda: qt_interact.on_get_todo_clicked(
-                    self.app.main_window.consoleTabWidget, self.app
-                )
+                'callback': lambda: qt_interact.on_get_todo_clicked(None, self.app)
             },
             {
                 'icon': '📚',
                 'text': 'Get Course',
-                'callback': lambda: qt_interact.on_get_course_clicked(
-                    self.app.main_window.consoleTabWidget, self.app
-                )
+                'callback': lambda: qt_interact.on_get_course_clicked(None, self.app)
             },
             {
                 'icon': '📖',
                 'text': 'Get Syll All',
-                'callback': lambda: qt_interact.on_gsyll_all_clicked(
-                    self.app.main_window.consoleTabWidget
-                )
+                'callback': lambda: qt_interact.on_gsyll_all_clicked(None, self.app)
             },
             {
                 'icon': '🧹',

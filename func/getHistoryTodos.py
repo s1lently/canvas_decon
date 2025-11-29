@@ -148,9 +148,16 @@ def fetch_page(session, page, per_page):
         pass
     return []
 
-def get_history_todos(session):
-    """Get recent graded/completed assignments (Max 5 pages / 500 items)"""
+def get_history_todos(session, progress=None):
+    """Get recent graded/completed assignments (Max 5 pages / 500 items)
+
+    Args:
+        session: requests.Session
+        progress: TaskProgress instance (optional)
+    """
     start_total = time.time()
+    if progress:
+        progress.update(progress=0, status="Fetching graded submissions...")
     print("Fetching recent graded submissions (Max 5 pages)...")
 
     per_page = 100
@@ -168,8 +175,13 @@ def get_history_todos(session):
             if data:
                 all_graded.extend(data)
             completed += 1
+            pct = int((completed / max_pages) * 20)  # 0-20%
+            if progress:
+                progress.update(progress=pct, status=f"Fetching {completed}/{max_pages} pages")
             print(f"\r  Fetching: {completed}/{max_pages} pages | Items: {len(all_graded)}", end='', flush=True)
-            
+
+    if progress:
+        progress.update(progress=25, status=f"Fetched {len(all_graded)} items")
     print(f"\n  ✓ Fetched {len(all_graded)} recent items in {time.time() - fetch_start:.2f}s")
 
     # Step 3: Get metadata
@@ -180,6 +192,8 @@ def get_history_todos(session):
     now = datetime.now(timezone.utc)
 
     # Step 4: Convert concurrently (Heavy IO due to assignment details fetch)
+    if progress:
+        progress.update(progress=30, status="Converting submissions...")
     print("Converting submissions (Heavy IO)...")
     history_todos = []
     skipped_future = 0
@@ -218,9 +232,14 @@ def get_history_todos(session):
             # Progress update
             elapsed = time.time() - convert_start
             speed = processed_count / elapsed if elapsed > 0 else 0
+            pct = 30 + int((processed_count / total_subs) * 65)  # 30-95%
+            if progress:
+                progress.update(progress=pct, status=f"Converting {processed_count}/{total_subs}", speed=f"{speed:.1f}/s")
             print(f"\r  Converting: {processed_count}/{total_subs} | Speed: {speed:.1f} items/s | Found: {len(history_todos)}", end='', flush=True)
 
     total_time = time.time() - start_total
+    if progress:
+        progress.update(progress=95, status=f"Found {len(history_todos)} history items")
     print(f"\n✓ Completed in {total_time:.2f}s (Avg: {len(history_todos)/total_time:.1f} items/s)")
     print(f"  Total History TODOs: {len(history_todos)} (Skipped {skipped_future} future)")
     
@@ -247,20 +266,31 @@ def save_history_todos(todos):
             json.dump(todos, f, indent=2, ensure_ascii=False)
         print(f"Fallback save to {output_path}")
 
-def main():
-    """Fetch and save historical TODOs"""
+def main(progress=None):
+    """Fetch and save historical TODOs
+
+    Args:
+        progress: TaskProgress instance (optional, for GUI mode)
+    """
+    if progress:
+        progress.update(progress=0, status="Starting...")
     cookies = load_cookies()
     session = requests.Session()
     session.cookies.update(cookies)
     session.headers.update({'Accept': 'application/json+canvas-string-ids', 'User-Agent': 'Mozilla/5.0'})
 
     try:
-        history_todos = get_history_todos(session)
+        history_todos = get_history_todos(session, progress=progress)
         save_history_todos(history_todos)
+        if progress:
+            progress.finish(f"Saved {len(history_todos)} history items")
         print(f"✓ Completed: {len(history_todos)} historical TODOs saved")
     except requests.exceptions.RequestException as e:
+        if progress:
+            progress.fail(str(e))
         print(f"Error: {e}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

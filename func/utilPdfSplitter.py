@@ -40,7 +40,7 @@ def split_pdf_by_chapters(pdf_path, chapters_json, output_dir):
 
     for chapter_info in chapters_json:
         chapter_num = chapter_info.get('chapter', '?')
-        chapter_name = chapter_info.get('name', 'Untitled')
+        chapter_name = chapter_info.get('name') or 'Untitled'  # Handle None explicitly
         start_page = chapter_info.get('start_page', 1)
         end_page = chapter_info.get('end_page', start_page)
 

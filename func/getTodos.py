@@ -212,13 +212,21 @@ def fetch_planner_items_page(session, page, start_date, end_date):
         pass
     return []
 
-def get_todos_concurrent(session, days=365):
-    """Fetch planner items concurrently"""
+def get_todos_concurrent(session, days=365, progress=None):
+    """Fetch planner items concurrently
+
+    Args:
+        session: requests.Session
+        days: Days to look ahead
+        progress: TaskProgress instance (optional)
+    """
     start = datetime.now()
     end = start + timedelta(days=days)
     start_date = start.date().isoformat()
     end_date = end.date().isoformat()
-    
+
+    if progress:
+        progress.update(progress=0, status=f"Fetching Planner ({days} days)...")
     print(f"Fetching Planner items ({days} days)...")
     
     # First request to get total pages (if possible) or just page 1
@@ -276,10 +284,12 @@ def get_todos_concurrent(session, days=365):
                 }
             })
             
+    if progress:
+        progress.update(progress=10, status=f"Found {len(filtered_items)} TODOs")
     print(f"  Found {len(filtered_items)} upcoming TODOs")
     return filtered_items
 
-def process_and_save_todos_concurrent(todos, session):
+def process_and_save_todos_concurrent(todos, session, progress=None):
     """Process todos details concurrently"""
     output_path = config.TODOS_FILE
     existing = {}
@@ -293,9 +303,11 @@ def process_and_save_todos_concurrent(todos, session):
 
     todo_dir = config.TODO_DIR
     os.makedirs(todo_dir, exist_ok=True)
-    
+
+    if progress:
+        progress.update(progress=15, status="Processing details...")
     print("Processing details & downloading files (Concurrent)...")
-    
+
     processed_todos = []
     start_time = time.time()
     total_items = len(todos)
@@ -345,9 +357,15 @@ def process_and_save_todos_concurrent(todos, session):
             # Progress bar
             elapsed = time.time() - start_time
             speed = processed_count / elapsed if elapsed > 0 else 0
+            pct = 15 + int((processed_count / total_items) * 80)  # 15-95%
+            if progress:
+                progress.update(progress=pct, status=f"Processing {processed_count}/{total_items}", speed=f"{speed:.1f}/s")
             print(f"\r  Processing: {processed_count}/{total_items} | Speed: {speed:.1f} items/s", end='', flush=True)
 
-    print(f"\n✓ Processed {total_items} items in {time.time() - start_time:.2f}s")
+    elapsed_total = time.time() - start_time
+    if progress:
+        progress.update(progress=95, status=f"Processed {total_items} in {elapsed_total:.1f}s")
+    print(f"\n✓ Processed {total_items} items in {elapsed_total:.2f}s")
     
     # Sort by due date
     def parse_due(t):
@@ -361,28 +379,43 @@ def process_and_save_todos_concurrent(todos, session):
     
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
-        
+
+    if progress:
+        progress.finish(f"Saved {len(result)} TODOs")
     print(f"✓ Saved {len(result)} TODOs to todos.json")
     return result
 
-def main(days=365):
+
+def main(days=365, progress=None):
+    """Main entry point
+
+    Args:
+        days: Days to look ahead
+        progress: TaskProgress instance (optional, for GUI mode)
+    """
+    if progress:
+        progress.update(progress=0, status="Starting...")
     print(f"Fetching Canvas TODO items (next {days} days)...")
+
     cookies = load_cookies()
     session = requests.Session()
     session.cookies.update(cookies)
     session.headers.update({
-        'Accept': 'application/json+canvas-string-ids', 
+        'Accept': 'application/json+canvas-string-ids',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
     })
-    
+
     try:
-        raw_todos = get_todos_concurrent(session, days=days)
-        process_and_save_todos_concurrent(raw_todos, session)
+        raw_todos = get_todos_concurrent(session, days=days, progress=progress)
+        process_and_save_todos_concurrent(raw_todos, session, progress=progress)
     except Exception as e:
+        if progress:
+            progress.fail(str(e))
         print(f"Error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

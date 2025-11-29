@@ -18,13 +18,13 @@ class SignalInitializer:
 
         # === MAIN WINDOW ===
         mw.backBtn.clicked.connect(app.launcher_handler.show)
-        mw.getCookieBtn.clicked.connect(lambda: qt_interact.on_get_cookie_clicked(mw.consoleTabWidget, app))
-        mw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(mw.consoleTabWidget, app))
-        mw.getCourseBtn.clicked.connect(lambda: qt_interact.on_get_course_clicked(mw.consoleTabWidget, app))
-        mw.gSyllAllBtn.clicked.connect(lambda: qt_interact.on_gsyll_all_clicked(mw.consoleTabWidget))
+        mw.getCookieBtn.clicked.connect(lambda: qt_interact.on_get_cookie_clicked(None, app))
+        mw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(None, app))
+        mw.getCourseBtn.clicked.connect(lambda: qt_interact.on_get_course_clicked(None, app))
+        mw.gSyllAllBtn.clicked.connect(lambda: qt_interact.on_gsyll_all_clicked(None, app))
         mw.cleanBtn.clicked.connect(app.sitting_handler.show_clean_dialog)
         mw.automationTopBtn.clicked.connect(app.automation_handler.open_top)
-        mw.sittingBtn.clicked.connect(app.sitting_handler.show) # Updated to show overlay
+        mw.sittingBtn.clicked.connect(app.sitting_handler.show)
         mw.openFolderBtn.clicked.connect(app.main_handler.on_open_folder_clicked)
         mw.courseDetailBtn.clicked.connect(app.course_detail_handler.open)
 
@@ -37,9 +37,6 @@ class SignalInitializer:
         # Filter connections
         for f in [mw.filterHomework, mw.filterQuiz, mw.filterDiscussion, mw.filterAutomatable]:
             f.stateChanged.connect(app.main_handler.apply_filters)
-
-        # Console tab close
-        mw.consoleTabWidget.tabCloseRequested.connect(app.main_handler.close_tab)
 
         # === SITTING OVERLAY ===
         sw.backBtn.clicked.connect(app.sitting_handler.hide) # Updated: Hide overlay
@@ -82,8 +79,8 @@ class SignalInitializer:
 
         # === AUTOMATION WINDOW ===
         aw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
-        aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(aw.consoleTabWidget, app))
-        aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(aw.consoleTabWidget))
+        aw.getTodoBtn.clicked.connect(lambda: qt_interact.on_get_todo_clicked(None, app))
+        aw.cleanBtn.clicked.connect(lambda: qt_interact.on_clean_clicked(None, app))
 
         # Automation tabs (4 tabs: Auto Open, Auto Close, All Automatable, All Items)
         tab_prefixes = ['automatableOpen', 'automatableClose', 'automatable', 'allItems']
@@ -107,16 +104,13 @@ class SignalInitializer:
             # Double-click to open AutoDetail
             item_list.itemDoubleClicked.connect(app.automation_handler.on_item_double_clicked)
 
-        # Console tab close
-        aw.consoleTabWidget.tabCloseRequested.connect(app.automation_handler.close_tab)
-
         # === COURSE DETAIL WINDOW ===
         cdw.backBtn.clicked.connect(lambda: qt_interact.on_back_clicked(app.stacked_widget, mw))
         cdw.openSyllabusFolderBtn.clicked.connect(app.course_detail_handler.on_open_syllabus_folder_clicked)
         cdw.openTextbookFolderBtn.clicked.connect(app.course_detail_handler.on_open_textbook_folder_clicked)
         cdw.deconTextbookBtn.clicked.connect(app.course_detail_handler.on_decon_textbook_clicked)
-        cdw.loadFromDeconBtn.clicked.connect(lambda: qt_interact.on_load_from_decon_clicked(app, cdw.consoleTabWidget))
-        cdw.learnMaterialBtn.clicked.connect(lambda: qt_interact.on_learn_material_clicked(app, cdw.consoleTabWidget))
+        cdw.loadFromDeconBtn.clicked.connect(lambda: qt_interact.on_load_from_decon_clicked(app))
+        cdw.learnMaterialBtn.clicked.connect(lambda: qt_interact.on_learn_material_clicked(app))
         cdw.itemList.itemDoubleClicked.connect(app.course_detail_handler.on_item_double_clicked)
         cdw.categoryList.currentRowChanged.connect(app.course_detail_handler.on_category_changed)
         cdw.itemList.currentRowChanged.connect(app.course_detail_handler.on_item_changed)
@@ -128,27 +122,24 @@ class SignalInitializer:
 
         # Removed: ios_toggle_course_detail signal (moved to sidebar)
 
-        # === AUTO DETAIL WINDOW ===
+        # === AUTO DETAIL WINDOW (ModernAutoDetailWidget) ===
         def on_auto_detail_back():
             app.auto_detail_handler.stop_quiz_status_timer()  # Stop timer on back
             qt_interact.on_back_clicked(app.stacked_widget, mw)
-        adw.backBtn.clicked.connect(on_auto_detail_back)
-        adw.hwFolderBtn.clicked.connect(app.auto_detail_handler.on_auto_folder_clicked)
-        adw.quizFolderBtn.clicked.connect(app.auto_detail_handler.on_auto_folder_clicked)
-        adw.hwDebugBtn.clicked.connect(app.auto_detail_handler.on_hw_debug_clicked)
-        adw.quizDebugBtn.clicked.connect(app.auto_detail_handler.on_quiz_debug_clicked)
-        adw.hwAgainBtn.clicked.connect(app.auto_detail_handler.on_hw_again_clicked)
-        adw.quizAgainBtn.clicked.connect(app.auto_detail_handler.on_quiz_again_clicked)
-        adw.hwUploadPreviewBtn.clicked.connect(app.auto_detail_handler.on_hw_preview_clicked)
-        adw.quizStartPreviewBtn.clicked.connect(app.auto_detail_handler.on_quiz_preview_clicked)
-        adw.hwSubmitBtn.clicked.connect(app.auto_detail_handler.on_hw_submit_clicked)
-        adw.quizSubmitBtn.clicked.connect(app.auto_detail_handler.on_quiz_submit_clicked)
+
+        # Connect to widget signals (ModernAutoDetailWidget uses pyqtSignals)
+        adw.back_clicked.connect(on_auto_detail_back)
+        adw.folder_clicked.connect(app.auto_detail_handler.on_auto_folder_clicked)
+        adw.debug_clicked.connect(app.auto_detail_handler.on_debug_clicked)
+        adw.again_clicked.connect(app.auto_detail_handler.on_again_clicked)
+        adw.preview_clicked.connect(app.auto_detail_handler.on_preview_clicked)
+        adw.submit_clicked.connect(app.auto_detail_handler.on_submit_clicked)
         adw.viewDetailBtn.clicked.connect(app.auto_detail_handler.on_view_detail_clicked)
 
-        # Model selection
-        adw.productComboBox.addItems(['Gemini', 'Claude'])
-        adw.productComboBox.currentTextChanged.connect(app.auto_detail_handler.on_product_changed)
-        adw.modelComboBox.currentTextChanged.connect(app.auto_detail_handler.on_model_changed)
+        # Model selection - widget already has items, just connect signals
+        adw.product_changed.connect(app.auto_detail_handler.on_product_changed)
+        adw.model_changed.connect(app.auto_detail_handler.on_model_changed)
+        adw.tab_changed.connect(app.auto_detail_handler.on_tab_changed)
         app.auto_detail_handler.init_model_selection()
 
         # === LAUNCHER OVERLAY ===
@@ -164,38 +155,24 @@ class SignalInitializer:
         app.launcher_overlay.todoList.itemDoubleClicked.connect(app.launcher_handler.on_todo_double_clicked)
 
         # === TOGGLE CONNECTIONS ===
-        for toggle in [app.ios_toggle_main] + app.ios_toggles_auto:
-            toggle.stateChanged.connect(app.main_handler.on_toggle_console_clicked)
-
         app.history_toggle.stateChanged.connect(app.main_handler.on_history_toggle_clicked)
 
         # === SIDEBAR NAVIGATION ===
         def navigate_to(page_id):
             """Handle sidebar navigation"""
             if page_id == 'launch':
-                # Launch is overlay on Main window - switch to Main first
                 app.stacked_widget.setCurrentWidget(mw)
                 app.launcher_handler.show()
             elif page_id == 'main':
-                # Main = close launcher overlay and show pure Main window
                 app.stacked_widget.setCurrentWidget(mw)
                 app.launcher_handler.hide()
             elif page_id == 'auto':
                 app.automation_handler.open_top()
             elif page_id == 'sitting':
-                # Sitting is now an overlay
                 app.sitting_handler.show()
 
         app.sidebar.navigate.connect(navigate_to)
 
         # === INITIAL STATE ===
-        # Load login info and API settings
         app.sitting_handler.load_current_login_info()
         app.sitting_handler.load_api_settings()
-
-        # Hide consoles initially
-        for w in [mw.consoleTabWidget, aw.consoleTabWidget, cdw.consoleTabWidget]:
-            w.setVisible(False)
-
-        for t in [app.ios_toggle_main] + app.ios_toggles_auto:
-            t.setChecked(False)

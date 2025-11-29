@@ -76,7 +76,11 @@ def save_preview(qs, html_txt, output_dir):
         for i, q in enumerate(qs):
             f.write(f"### Q{i+1} ({q['id']})\n{q['txt']}\n\n")
             if q.get('imgs'): f.write("**Q-Imgs:** " + ", ".join([f"`{os.path.basename(i)}`" for i in q['imgs']]) + "\n\n")
-            f.write("**Answers:**\n"); [f.write(f"- `{a['id']}`: {a['txt'] or '[IMG]'}") or (a.get('imgs') and f.write(f" (Imgs: {', '.join([os.path.basename(i) for i in a['imgs']])})")) or f.write("\n") for a in q['ans']]
+            f.write("**Answers:**\n")
+            for a in q['ans']:
+                line = f"- `{a['id']}`: {a['txt'] or '[IMG]'}"
+                if a.get('imgs'): line += f" (Imgs: {', '.join([os.path.basename(img) for img in a['imgs']])})"
+                f.write(line + "\n")
             f.write("\n---\n\n")
     print(f"✓ Preview saved: {output_dir}/questions.html & questions.md")
 def save_answers(qs, ans, output_dir):
@@ -84,8 +88,13 @@ def save_answers(qs, ans, output_dir):
         f.write("# Quiz Answers\n\n")
         for i, q in enumerate(qs):
             f.write(f"### Q{i+1} ({q['id']})\n{q['txt']}\n\n")
-            if q.get('imgs'): f.write("**Q-Imgs:** " + ", ".join([f"`{os.path.basename(i)}`" for i in q['imgs']]) + "\n\n")
-            sel = ans.get(q['id']); [f.write(f"- {'✅ ' if a['id'] == sel else ''}`{a['id']}`: {a['txt'] or 'No answer text provided.'}") or (a.get('imgs') and f.write(f" (Imgs: {', '.join([os.path.basename(i) for i in a['imgs']])})")) or f.write("\n") for a in q['ans']]
+            if q.get('imgs'): f.write("**Q-Imgs:** " + ", ".join([f"`{os.path.basename(img)}`" for img in q['imgs']]) + "\n\n")
+            sel = ans.get(q['id'])
+            for a in q['ans']:
+                marker = "[*] " if a['id'] == sel else "[ ] "
+                line = f"- {marker}`{a['id']}`: {a['txt'] or 'No answer text provided.'}"
+                if a.get('imgs'): line += f" (Imgs: {', '.join([os.path.basename(img) for img in a['imgs']])})"
+                f.write(line + "\n")
             f.write("\n")
 def submit(s, url, doc, qs, ans, skip_confirm=False):
     un = set(q['id'] for q in qs) - set(ans.keys()); print(f"\n{'='*60}\nTotal: {len(qs)} | Answered: {len(ans)} | Unanswered: {len(un)}")
@@ -117,13 +126,14 @@ def start_quiz_now(s, url):
         return (True, r, s)
     return (False, r, s)
 
-def run_gui(url, product, model, prompt, assignment_folder=None, thinking=False, auto_start=False):
+def run_gui(url, product, model, prompt, assignment_folder=None, thinking=False, auto_start=False, progress=None):
     if not assignment_folder: raise ValueError("assignment_folder is required")
     output_dir = os.path.join(assignment_folder, 'auto', 'output'); os.makedirs(output_dir, exist_ok=True)
     c = {x['name']: x['value'] for x in json.load(open(config.COOKIES_FILE))}
     s = requests.Session(); s.cookies.update(c); s.headers.update({'User-Agent': 'Mozilla/5.0'})
 
     # Check quiz status first
+    if progress: progress.update(status="Checking quiz status...", progress=5)
     is_started, r, s, status = check_quiz_status(s, url)
 
     if status == 'failed':
@@ -135,18 +145,24 @@ def run_gui(url, product, model, prompt, assignment_folder=None, thinking=False,
             return {'status': 'not_started', 'session': s, 'url': url}
         else:
             # Auto start quiz
+            if progress: progress.update(status="Starting quiz...", progress=10)
             print("🚀 Starting quiz...")
             success, r, s = start_quiz_now(s, url)
             if not success:
                 raise Exception("Failed to start quiz")
 
+    if progress: progress.update(status="Parsing questions...", progress=20)
     d = html.fromstring(r.content)
     qs = parse_questions(d, r.url, output_dir)
     if not qs:
         raise Exception("No questions found - quiz may not be properly started")
+    if progress: progress.update(status=f"Found {len(qs)} questions, saving preview...", progress=30)
     save_preview(qs, r.text, output_dir)
+    if progress: progress.update(status=f"Asking {product} {model}...", progress=40)
     ans = get_answers(qs, product, model, prompt, thinking=thinking)
+    if progress: progress.update(status="Saving answers...", progress=90)
     save_answers(qs, ans, output_dir)
+    if progress: progress.update(status="Done", progress=100)
     return {'status': 'success', 'questions': qs, 'answers': ans, 'output_dir': output_dir, 'session': s, 'doc': d, 'url': r.url}
 def main(url=None, product=None, model=None):
     import argparse; parser = argparse.ArgumentParser(description='Quiz automation CLI'); parser.add_argument('--url', type=str, help='Quiz URL'); parser.add_argument('--product', type=str, choices=['Gemini', 'Claude'], help='AI product (Gemini/Claude)'); parser.add_argument('--model', type=str, help='Model name'); args = parser.parse_args()

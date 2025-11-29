@@ -60,12 +60,18 @@ def submit_to_canvas(url=None, assignment_folder=None):
     for i, fid in enumerate(file_ids): data[f'attachments[{i}][uploaded_data]'] = f'C:\\fakepath\\f{i}.dat'
     try: r = session.post(f"https://psu.instructure.com/courses/{course_id}/assignments/{assignment_id}/submissions", data=data, headers=headers('application/x-www-form-urlencoded; charset=UTF-8')); r.raise_for_status(); print(f"  ✅ Success! ID: {r.json().get('id')}"); return True
     except Exception as e: print(f"  ❌ Failed: {e}") or False
-def run_gui(url, product, model, prompt, ref_files=[], assignment_folder=None):
+def run_gui(url, product, model, prompt, ref_files=[], assignment_folder=None, progress=None):
     if not assignment_folder: raise ValueError("assignment_folder is required")
     output_dir = os.path.join(assignment_folder, 'auto', 'output'); os.makedirs(output_dir, exist_ok=True); [f.unlink() for f in Path(output_dir).glob('*') if f.is_file()]
-    data = get_homework_details(url); description = unescape(re.sub(r'<[^>]+>', '\n', data['assignment']['description'])).strip(); answer = ask_llm_with_pdfs(description, product, model, prompt, ref_files)
+    if progress: progress.update(status="Fetching assignment details...", progress=10)
+    data = get_homework_details(url); description = unescape(re.sub(r'<[^>]+>', '\n', data['assignment']['description'])).strip()
+    if progress: progress.update(status="Asking LLM...", progress=30)
+    answer = ask_llm_with_pdfs(description, product, model, prompt, ref_files)
     if '[no]' in answer.lower()[:100]: raise Exception("LLM returned [no]")
-    clean_answer, img_requests = parse_img_requests(answer); answer_path = os.path.join(output_dir, 'answer.md'); open(answer_path, 'w', encoding='utf-8').write(clean_answer); generate_images(img_requests); docx_path = os.path.join(output_dir, 'answer.docx'); md_to_docx(docx_path, answer_path); return {'status': 'success', 'answer_path': answer_path, 'docx_path': docx_path}
+    if progress: progress.update(status="Generating output...", progress=70)
+    clean_answer, img_requests = parse_img_requests(answer); answer_path = os.path.join(output_dir, 'answer.md'); open(answer_path, 'w', encoding='utf-8').write(clean_answer); generate_images(img_requests); docx_path = os.path.join(output_dir, 'answer.docx'); md_to_docx(docx_path, answer_path)
+    if progress: progress.update(status="Done", progress=100)
+    return {'status': 'success', 'answer_path': answer_path, 'docx_path': docx_path}
 def main(url=None, product=None, model=None):
     import argparse; parser = argparse.ArgumentParser(description='Homework automation CLI'); parser.add_argument('--url', type=str, help='Assignment URL'); parser.add_argument('--product', type=str, choices=['Gemini', 'Claude'], help='AI product (Gemini/Claude)'); parser.add_argument('--model', type=str, help='Model name'); args = parser.parse_args()
     url = args.url or url or TARGET_ASSIGNMENT_URL; product = args.product or product or 'Gemini'; model = args.model or model or 'gemini-2.5-pro'; print(f"🎯 URL: {url}\n🤖 Product: {product}\n📦 Model: {model}\n"); config.ensure_dirs(); [f.unlink() for f in Path(OUTPUT_DIR).glob('*') if f.is_file()]

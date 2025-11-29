@@ -110,28 +110,28 @@ class AutoDetailWindowHandler(BaseHandler):
             adw.quizAttemptsLabel.setText(f"Attempts: {used}/{allowed} ({left} left)")
             adw.quizAttemptsLabel.setStyleSheet("font-size: 13px; color: #eab308;")
 
-        # Status indicator (always show current state)
+        # Status indicator (always show current state, no emojis)
         if status.get('in_progress'):
             if status.get('time_remaining') is not None:
                 mins = status['time_remaining'] // 60
                 secs = status['time_remaining'] % 60
-                adw.quizTimeLabel.setText(f"🔴 进行中 ⏱ {mins}:{secs:02d}")
+                adw.quizTimeLabel.setText(f"In Progress - {mins}:{secs:02d}")
                 adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #f59e0b;")
             else:
-                adw.quizTimeLabel.setText("🔴 进行中")
+                adw.quizTimeLabel.setText("In Progress")
                 adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #f59e0b;")
         elif status.get('attempts_used', 0) == 0:
             # Never attempted
-            adw.quizTimeLabel.setText("⚪ 未开始")
+            adw.quizTimeLabel.setText("Not Started")
             adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #9ca3af;")
         elif left == 0:
             # No attempts left
-            adw.quizTimeLabel.setText("✅ 已完成")
+            adw.quizTimeLabel.setText("Completed")
             adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #22c55e;")
         else:
             # Has attempts, not in progress
             time_str = f" ({status['time_limit']}min)" if status.get('time_limit') else ""
-            adw.quizTimeLabel.setText(f"🟡 可重试{time_str}")
+            adw.quizTimeLabel.setText(f"Retryable{time_str}")
             adw.quizTimeLabel.setStyleSheet("font-size: 13px; font-weight: bold; color: #eab308;")
 
     def populate_window(self):
@@ -190,7 +190,7 @@ class AutoDetailWindowHandler(BaseHandler):
             self.stop_quiz_status_timer()
             adw.quizStatusBar.setVisible(False)
 
-    def load_preview(self):
+    def load_preview(self, tab_name=None):
         """Load AI preview (quiz or homework) if files exist"""
         if not self.auto_detail_mgr:
             return None
@@ -200,11 +200,27 @@ class AutoDetailWindowHandler(BaseHandler):
         output_dir = os.path.join(assignment_folder, 'auto', 'output')
         if not os.path.exists(output_dir):
             return None
+
+        # For quiz, check which tab to load
         if self.auto_detail_mgr.is_quiz:
-            return self.auto_detail_mgr.load_quiz_preview(output_dir)
+            has_qeswa = os.path.exists(os.path.join(output_dir, 'QesWA.md'))
+            has_questions = os.path.exists(os.path.join(output_dir, 'questions.md'))
+            # Update tab visibility
+            self.auto_detail_window.update_available_tabs(has_qeswa, has_questions)
+
+            if tab_name == 'questions' and has_questions:
+                return self.auto_detail_mgr.load_quiz_preview(output_dir, prefer_questions=True)
+            else:
+                return self.auto_detail_mgr.load_quiz_preview(output_dir)
         elif self.auto_detail_mgr.is_homework:
             return self.auto_detail_mgr.load_homework_preview(output_dir)
         return None
+
+    def on_tab_changed(self, tab_name):
+        """Handle tab change - reload preview with different file"""
+        preview_html = self.load_preview(tab_name)
+        if preview_html:
+            self.auto_detail_window.aiPreviewView.setHtml(preview_html)
 
     def update_status(self, status_text):
         """Slot function to update AutoDetail status label from background thread"""
@@ -224,6 +240,8 @@ class AutoDetailWindowHandler(BaseHandler):
         idx = self.auto_detail_window.modelComboBox.findText(model)
         if idx >= 0:
             self.auto_detail_window.modelComboBox.setCurrentIndex(idx)
+        # Show thinking toggle only for Claude
+        self.auto_detail_window.thinkingToggleWidget.setVisible(product == 'Claude')
 
     def on_product_changed(self, product):
         """Handle product selection change"""
@@ -246,6 +264,15 @@ class AutoDetailWindowHandler(BaseHandler):
             fp = os.path.join(config.TODO_DIR, folder)
             if os.path.exists(fp):
                 self.app._open_folder(fp)
+
+    def on_debug_clicked(self):
+        """Unified debug handler - delegates to hw or quiz based on type"""
+        if not self.auto_detail_mgr:
+            return
+        if self.auto_detail_mgr.is_quiz:
+            self.on_quiz_debug_clicked()
+        else:
+            self.on_hw_debug_clicked()
 
     def on_hw_debug_clicked(self):
         """Debug homework (run CLI with current settings)"""
@@ -281,6 +308,15 @@ class AutoDetailWindowHandler(BaseHandler):
                          '--url', url, '--product', product, '--model', model],
                         cwd=config.ROOT_DIR)
 
+    def on_again_clicked(self):
+        """Unified again handler - delegates to hw or quiz based on type"""
+        if not self.auto_detail_mgr:
+            return
+        if self.auto_detail_mgr.is_quiz:
+            self.on_quiz_again_clicked()
+        else:
+            self.on_hw_again_clicked()
+
     def on_hw_again_clicked(self):
         """Regenerate homework with current settings"""
         if not self.auto_detail_mgr:
@@ -305,18 +341,28 @@ class AutoDetailWindowHandler(BaseHandler):
             adw.previewStatusLabel.setText("Status: Error - No assignment folder")
             return
 
-        def run():
+        def run(progress=None):
             try:
+                if progress:
+                    progress.update(status="Starting homework generation...", progress=5)
                 from func import getHomework
-                result = getHomework.run_gui(url, product, model, prompt, ref_files, assignment_folder)
+                result = getHomework.run_gui(url, product, model, prompt, ref_files, assignment_folder, progress=progress)
+                if progress:
+                    progress.update(status="Preview generated", progress=100)
                 self.app.auto_detail_signal.status_update.emit("Status: Preview generated")
                 self.app.auto_detail_signal.preview_refresh.emit()
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+                if progress:
+                    progress.update(error=str(e))
                 self.app.auto_detail_signal.status_update.emit(f"Status: Error - {str(e)}")
 
-        threading.Thread(target=run, daemon=True).start()
+        # Use Mission Control if available
+        if hasattr(self.app, 'mission_control'):
+            self.app.mission_control.start_task("Homework Generation", run)
+        else:
+            threading.Thread(target=run, daemon=True).start()
         adw.previewStatusLabel.setText("Status: Generating...")
 
     def on_quiz_again_clicked(self, auto_start=False):
@@ -338,27 +384,38 @@ class AutoDetailWindowHandler(BaseHandler):
             adw.previewStatusLabel.setText("Status: Error - No assignment folder")
             return
 
-        def run():
+        def run(progress=None):
             try:
+                if progress:
+                    progress.update(status="Checking quiz status...", progress=5)
                 from func import getQuiz_ultra
-                result = getQuiz_ultra.run_gui(url, product, model, prompt, assignment_folder, thinking=thinking, auto_start=auto_start)
+                result = getQuiz_ultra.run_gui(url, product, model, prompt, assignment_folder, thinking=thinking, auto_start=auto_start, progress=progress)
 
                 # Check if quiz is not started
                 if result.get('status') == 'not_started':
+                    if progress:
+                        progress.update(status="Quiz not started", progress=100)
                     self.app.auto_detail_signal.status_update.emit("Status: Quiz not started")
-                    # Emit signal to show confirmation dialog on main thread
                     self.app.auto_detail_signal.quiz_not_started.emit()
                     return
 
                 self.app._last_quiz_result = result
+                if progress:
+                    progress.update(status="Preview generated", progress=100)
                 self.app.auto_detail_signal.status_update.emit("Status: Preview generated")
                 self.app.auto_detail_signal.preview_refresh.emit()
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+                if progress:
+                    progress.update(error=str(e))
                 self.app.auto_detail_signal.status_update.emit(f"Status: Error - {str(e)}")
 
-        threading.Thread(target=run, daemon=True).start()
+        # Use Mission Control if available
+        if hasattr(self.app, 'mission_control'):
+            self.app.mission_control.start_task("Quiz Generation", run)
+        else:
+            threading.Thread(target=run, daemon=True).start()
         adw.previewStatusLabel.setText("Status: Checking quiz status...")
 
     def on_quiz_not_started(self):
@@ -375,6 +432,15 @@ class AutoDetailWindowHandler(BaseHandler):
             self.on_quiz_again_clicked(auto_start=True)
         else:
             adw.previewStatusLabel.setText("Status: Quiz not started - cancelled")
+
+    def on_preview_clicked(self):
+        """Unified preview handler - delegates to hw or quiz based on type"""
+        if not self.auto_detail_mgr:
+            return
+        if self.auto_detail_mgr.is_quiz:
+            self.on_quiz_preview_clicked()
+        else:
+            self.on_hw_preview_clicked()
 
     def on_hw_preview_clicked(self):
         """Generate homework preview (same as Again)"""
@@ -393,6 +459,15 @@ class AutoDetailWindowHandler(BaseHandler):
         if preview_html:
             adw.aiPreviewView.setHtml(preview_html)
             adw.previewStatusLabel.setText("Status: Preview loaded")
+
+    def on_submit_clicked(self):
+        """Unified submit handler - delegates to hw or quiz based on type"""
+        if not self.auto_detail_mgr:
+            return
+        if self.auto_detail_mgr.is_quiz:
+            self.on_quiz_submit_clicked()
+        else:
+            self.on_hw_submit_clicked()
 
     def on_hw_submit_clicked(self):
         """Submit homework to Canvas"""

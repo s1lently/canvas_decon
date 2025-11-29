@@ -75,4 +75,4 @@ json_*.json
 learn_preferences.json
 
 # Output files
-output/
+output/error_screenshot.png

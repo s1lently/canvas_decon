@@ -196,9 +196,9 @@ class CourseDetailWindowHandler(BaseHandler):
 
         file_path = os.path.join(textbook_dir, selected_file)
 
-        def run_decon(console, progress):
+        def run_decon(progress):
             try:
-                progress.update_progress(1, 7, "Step 1/7: Selecting model...")
+                progress.update(progress=14, status="Step 1/7: Selecting model...")
 
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', 'func'))
                 from utilPromptFiles import upload_files, call_ai
@@ -208,47 +208,38 @@ class CourseDetailWindowHandler(BaseHandler):
                 from PyPDF2 import PdfReader, PdfWriter
                 from gui.learn.cfgLearnPrefs import get_product, get_model as get_pref_model
 
-                # Get user's model preference from Learn Preferences
                 pref_product = get_product()
                 pref_model = get_pref_model()
 
-                # Resolve model based on preferences
                 try:
                     if pref_product == 'Auto' or pref_model == 'Auto':
-                        # Auto mode: use best available Gemini model
                         model_name = get_best_gemini_model()
-                        console.append(f"✓ Model: {model_name} (Auto-selected)")
+                        print(f"✓ Model: {model_name} (Auto-selected)")
                     elif pref_product == 'Gemini':
-                        # Use user-selected Gemini model
                         model_name = pref_model
-                        console.append(f"✓ Model: {model_name} (User-selected)")
+                        print(f"✓ Model: {model_name} (User-selected)")
                     else:
-                        # Decon only supports Gemini, fallback to best Gemini
-                        console.append(f"! Decon requires Gemini, but {pref_product} selected in preferences")
+                        print(f"! Decon requires Gemini, but {pref_product} selected")
                         model_name = get_best_gemini_model()
-                        console.append(f"✓ Using Gemini fallback: {model_name}")
+                        print(f"✓ Using Gemini fallback: {model_name}")
                 except Exception as e:
-                    console.append(f"[ERROR] Failed to select model: {e}")
-                    console.append("Please check your Gemini API key in Settings")
-                    return
+                    print(f"[ERROR] Failed to select model: {e}")
+                    raise
 
-                progress.update_progress(2, 7, "Step 2/7: Loading PDF...")
+                progress.update(progress=28, status="Step 2/7: Loading PDF...")
                 reader = PdfReader(file_path)
                 total_pages = len(reader.pages)
-                console.append(f"✓ PDF has {total_pages} pages")
+                print(f"✓ PDF has {total_pages} pages")
 
                 repaired_pdf_path = None
-
-                console.append("\n📖 Checking for embedded bookmarks...")
+                print("\n📖 Checking for embedded bookmarks...")
                 all_chapters = extract_chapters_from_bookmarks(file_path, total_pages)
 
                 if all_chapters:
-                    console.append("✓ Found valid chapter bookmarks (continuous from Chapter 1)")
-                    console.append(format_bookmark_chapters(all_chapters))
-                    console.append("\n⚡ Skipping AI analysis - using bookmark data")
-
-                    console.append("")
-                    repaired_pdf_path = repair_pdf_references(file_path, console)
+                    print("✓ Found valid chapter bookmarks")
+                    print(format_bookmark_chapters(all_chapters))
+                    print("\n⚡ Skipping AI analysis - using bookmark data")
+                    repaired_pdf_path = repair_pdf_references(file_path, None)
 
                     if repaired_pdf_path and repaired_pdf_path != file_path:
                         reader = PdfReader(repaired_pdf_path)
@@ -257,17 +248,12 @@ class CourseDetailWindowHandler(BaseHandler):
                         pdf_to_split = file_path
 
                     all_chapters = [
-                        {
-                            'chapter': ch['chapter_number'],
-                            'name': ch['chapter_name'],
-                            'start_page': ch['start_page'],
-                            'end_page': ch['end_page']
-                        }
+                        {'chapter': ch['chapter_number'], 'name': ch['chapter_name'],
+                         'start_page': ch['start_page'], 'end_page': ch['end_page']}
                         for ch in all_chapters
                     ]
-
                 else:
-                    console.append("! No valid bookmarks found - falling back to AI analysis")
+                    print("! No valid bookmarks - falling back to AI analysis")
                     pdf_to_split = file_path
 
                     TOC_PAGES = min(80, total_pages)
@@ -278,13 +264,11 @@ class CourseDetailWindowHandler(BaseHandler):
                     temp_toc_pdf = tempfile.NamedTemporaryFile(delete=False, suffix='_toc.pdf')
                     writer.write(temp_toc_pdf)
                     temp_toc_pdf.close()
-                    console.append(f"✓ Extracted first {TOC_PAGES} pages")
+                    print(f"✓ Extracted first {TOC_PAGES} pages")
 
-                    progress.update_progress(3, 7, "Step 3/7: Analyzing TOC...")
+                    progress.update(progress=42, status="Step 3/7: Analyzing TOC...")
                     uploaded_info = upload_files([temp_toc_pdf.name], 'Gemini')
-                    
-                    # Callback for status updates (e.g. 429 retries)
-                    status_cb = lambda msg: console.append(msg)
+                    status_cb = lambda msg: print(msg)
 
                     toc_prompt = """Analyze this textbook PDF (first 80 pages) and extract the Table of Contents.
 
@@ -326,7 +310,7 @@ CRITICAL RULES:
                     result = call_ai(toc_prompt, 'Gemini', model_name, uploaded_info=uploaded_info, status_callback=status_cb)
                     os.unlink(temp_toc_pdf.name)
 
-                    progress.update_progress(4, 7, "Step 4/7: Parsing TOC...")
+                    progress.update(progress=57, status="Step 4/7: Parsing TOC...")
                     result_clean = result.strip()
                     if result_clean.startswith('```'):
                         lines = result_clean.split('\n')
@@ -335,38 +319,27 @@ CRITICAL RULES:
                     try:
                         toc_data = json.loads(result_clean)
                     except json.JSONDecodeError as e:
-                        console.append(f"[ERROR] JSON parse failed: {e}")
-                        console.append(f"Raw: {result_clean[:300]}...")
+                        print(f"[ERROR] JSON parse failed: {e}")
+                        print(f"Raw: {result_clean[:300]}...")
                         raise
 
                     delta = toc_data.get('delta', 0)
                     toc_chapters = toc_data.get('chapters', [])
-
                     ch1_pdf = toc_data.get('chapter_1_pdf_page')
                     ch1_book = toc_data.get('chapter_1_book_page')
 
                     if ch1_pdf and ch1_book:
                         expected_delta = ch1_book - ch1_pdf
                         if expected_delta != delta:
-                            console.append(f"! Delta verification failed:")
-                            console.append(f"  AI reported delta={delta}")
-                            console.append(f"  But Chapter 1: book_page={ch1_book}, pdf_page={ch1_pdf}")
-                            console.append(f"  Expected delta={expected_delta}")
-                            console.append(f"  → Auto-correcting to delta={expected_delta}")
+                            print(f"! Delta verification failed: AI={delta}, expected={expected_delta}")
                             delta = expected_delta
                         else:
-                            console.append(f"✓ Delta verified: {delta} (Ch1: book_p{ch1_book} = pdf_p{ch1_pdf})")
-                        console.append(f"✓ Found {len(toc_chapters)} chapters from TOC")
+                            print(f"✓ Delta verified: {delta}")
+                        print(f"✓ Found {len(toc_chapters)} chapters from TOC")
                     else:
-                        console.append(f"✓ Found {len(toc_chapters)} chapters from TOC, delta={delta}")
-                        if toc_chapters:
-                            first_ch = toc_chapters[0]
-                            if first_ch.get('chapter') == 1:
-                                predicted_pdf_page = first_ch.get('book_page', 1) - delta
-                                console.append(f"  → Predicted Chapter 1 at PDF page {predicted_pdf_page}")
-                                console.append(f"  ! Please verify this is correct (check if off by ~16-17 pages)")
+                        print(f"✓ Found {len(toc_chapters)} chapters, delta={delta}")
 
-                    progress.update_progress(5, 7, "Step 5/7: Converting to PDF pages...")
+                    progress.update(progress=71, status="Step 5/7: Converting pages...")
                     all_chapters = []
                     last_toc_book_page = 0
 
@@ -374,24 +347,17 @@ CRITICAL RULES:
                         book_page = ch.get('book_page', 0)
                         pdf_start = book_page - delta
                         last_toc_book_page = max(last_toc_book_page, book_page)
-
-                        all_chapters.append({
-                            'chapter': ch.get('chapter'),
-                            'name': ch.get('name'),
-                            'start_page': pdf_start,
-                            'end_page': None
-                        })
+                        all_chapters.append({'chapter': ch.get('chapter'), 'name': ch.get('name') or 'Untitled',
+                                           'start_page': pdf_start, 'end_page': None})
 
                     scan_start_book_page = last_toc_book_page + 50
                     scan_start_pdf_page = scan_start_book_page - delta
-
-                    console.append(f"✓ Converted {len(all_chapters)} chapters")
-                    console.append(f"  Last TOC book page: {last_toc_book_page} → PDF page {last_toc_book_page - delta}")
+                    print(f"✓ Converted {len(all_chapters)} chapters")
 
                     remaining_pages = total_pages - scan_start_pdf_page
                     if remaining_pages > 0 and remaining_pages < 500:
-                        console.append(f"\n! Scanning {remaining_pages} remaining pages (from PDF page {scan_start_pdf_page})...")
-                        progress.update_progress(5, 7, f"Step 5/7: Scanning {remaining_pages} remaining pages...")
+                        print(f"! Scanning {remaining_pages} remaining pages...")
+                        progress.update(progress=71, status=f"Scanning {remaining_pages} pages...")
 
                         writer = PdfWriter()
                         for i in range(scan_start_pdf_page - 1, total_pages):
@@ -430,50 +396,36 @@ IMPORTANT:
                             tail_chapters = json.loads(tail_clean)
                             if isinstance(tail_chapters, list):
                                 for ch in tail_chapters:
-                                    relative_start = ch.get('start_page', 1)
-                                    relative_end = ch.get('end_page')
-
-                                    pdf_start = scan_start_pdf_page + relative_start - 1
-                                    pdf_end = scan_start_pdf_page + relative_end - 1 if relative_end else None
-
-                                    all_chapters.append({
-                                        'chapter': ch.get('chapter'),
-                                        'name': ch.get('name'),
-                                        'start_page': pdf_start,
-                                        'end_page': pdf_end
-                                    })
-                                console.append(f"  ✓ Found {len(tail_chapters)} additional chapters")
+                                    pdf_start = scan_start_pdf_page + ch.get('start_page', 1) - 1
+                                    pdf_end = scan_start_pdf_page + ch.get('end_page') - 1 if ch.get('end_page') else None
+                                    all_chapters.append({'chapter': ch.get('chapter'), 'name': ch.get('name') or 'Untitled',
+                                                       'start_page': pdf_start, 'end_page': pdf_end})
+                                print(f"  ✓ Found {len(tail_chapters)} additional chapters")
                         except:
-                            console.append(f"  ! Failed to parse tail chapters, skipping")
+                            print("  ! Failed to parse tail chapters")
 
-                    seen_chapters = set()
-                    unique_chapters = []
+                    seen = set()
+                    unique = []
                     for ch in all_chapters:
-                        ch_num = ch.get('chapter')
-                        if ch_num not in seen_chapters:
-                            seen_chapters.add(ch_num)
-                            unique_chapters.append(ch)
-                    all_chapters = unique_chapters
+                        if ch.get('chapter') not in seen:
+                            seen.add(ch.get('chapter'))
+                            unique.append(ch)
+                    all_chapters = unique
 
                     all_chapters.sort(key=lambda x: x['start_page'])
                     for i in range(len(all_chapters)):
                         if all_chapters[i]['end_page'] is None:
-                            if i < len(all_chapters) - 1:
-                                all_chapters[i]['end_page'] = all_chapters[i + 1]['start_page'] - 1
-                            else:
-                                all_chapters[i]['end_page'] = total_pages
+                            all_chapters[i]['end_page'] = all_chapters[i + 1]['start_page'] - 1 if i < len(all_chapters) - 1 else total_pages
 
-                    console.append(f"✓ Total: {len(all_chapters)} chapters")
+                    print(f"✓ Total: {len(all_chapters)} chapters")
 
-                progress.update_progress(6, 7, "Step 6/7: Validating boundaries...")
+                progress.update(progress=85, status="Step 6/7: Validating...")
                 for i in range(len(all_chapters) - 1):
-                    current = all_chapters[i]
-                    next_ch = all_chapters[i + 1]
-                    if current.get('end_page', 0) >= next_ch.get('start_page', 0):
-                        current['end_page'] = next_ch['start_page'] - 1
-                console.append(f"✓ Validated {len(all_chapters)} chapters")
+                    if all_chapters[i].get('end_page', 0) >= all_chapters[i + 1].get('start_page', 0):
+                        all_chapters[i]['end_page'] = all_chapters[i + 1]['start_page'] - 1
+                print(f"✓ Validated {len(all_chapters)} chapters")
 
-                progress.update_progress(7, 7, f"Step 7/7: Splitting into {len(all_chapters)} PDFs...")
+                progress.update(progress=95, status=f"Step 7/7: Splitting {len(all_chapters)} PDFs...")
                 decon_dir = os.path.join(textbook_dir, 'decon')
                 os.makedirs(decon_dir, exist_ok=True)
 
@@ -482,39 +434,28 @@ IMPORTANT:
                     json.dump(all_chapters, f, indent=2, ensure_ascii=False)
 
                 created_files = split_pdf_by_chapters(pdf_to_split, all_chapters, decon_dir)
-
-                progress.update_progress(7, 7, f"✓ Complete: {len(created_files)} chapters")
-                console.append(f"\n✓ Decon complete: {len(created_files)} chapter PDFs")
-                console.append(f"  Output: {decon_dir}")
+                progress.finish(f"✓ {len(created_files)} chapters")
+                print(f"\n✓ Decon complete: {len(created_files)} chapter PDFs → {decon_dir}")
 
                 if repaired_pdf_path and repaired_pdf_path != file_path and os.path.exists(repaired_pdf_path):
                     try:
                         os.unlink(repaired_pdf_path)
-                        console.append("✓ Cleaned up temporary repaired PDF")
                     except:
                         pass
 
             except Exception as e:
                 import traceback
-                progress.set_text_only(f"✗ Failed: {str(e)[:50]}")
-                console.append(f"\n[ERROR] {e}")
-                console.append(traceback.format_exc())
-
+                progress.update(status=f"✗ {str(e)[:40]}", error=True)
+                print(f"\n[ERROR] {e}")
+                print(traceback.format_exc())
                 if 'repaired_pdf_path' in locals() and repaired_pdf_path and repaired_pdf_path != file_path:
                     try:
                         os.unlink(repaired_pdf_path)
                     except:
                         pass
-                
-                raise e  # Re-raise to notify caller of failure
+                raise e
 
-        from gui.core import utilQtInteract as qt_interact
-        console, progress = qt_interact._create_console_tab(self.course_detail_window.consoleTabWidget, f"Decon: {selected_file}", with_progress=True)
-
-        def run_with_progress(c):
-            run_decon(c, progress)
-
-        qt_interact._run_in_thread(run_with_progress, console, "Decon Textbook")
+        self.app.mission_control.start_task(f"Decon: {selected_file}", run_decon)
 
     def drag_enter(self, event):
         """Handle drag enter event for course detail itemList"""

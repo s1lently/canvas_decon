@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import requests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import config
-from gui.qt_utils.base_handler import BaseHandler
+from gui.base_handler import BaseHandler
 from gui.details.mgrCourseDetail import CourseDetailManager
 from gui.learn.rdrLearnSitting import LearnSittingWidget
 from gui.widgets import rdrDelegates as delegates
@@ -508,7 +508,7 @@ IMPORTANT:
     def prefetch_all_tabs(self):
         """Prefetch all missing tabs in background"""
         def worker():
-            from gui.qt_utils.content_processors.html_processor import HTMLProcessor
+            from gui.processors import HTMLProcessor
             processor = HTMLProcessor(self.app)
             tabs = self.course_detail_mgr.course.get('tabs', {})
             tabs_dir = os.path.join(self.course_detail_mgr.course_dir, 'Tabs')
@@ -550,7 +550,7 @@ IMPORTANT:
         """Fetch tab content from server in background thread"""
         def fetch_worker():
             try:
-                from gui.qt_utils.content_processors.html_processor import HTMLProcessor
+                from gui.processors import HTMLProcessor
                 processor = HTMLProcessor(self.app)
                 session = processor.create_session()
                 print(f"[INFO] Fetching {tab_name} from {url}")

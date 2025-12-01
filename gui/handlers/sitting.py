@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout,
 from PyQt6.QtCore import Qt, QTimer
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
-from gui.qt_utils.base_handler import BaseHandler
+from gui.base_handler import BaseHandler
 
 
 class SittingWindowHandler(BaseHandler):

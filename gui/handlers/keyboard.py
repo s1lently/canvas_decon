@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QListWidget
 from PyQt6.QtCore import QEvent, Qt
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 import config
-from gui.qt_utils.base_handler import BaseHandler
+from gui.base_handler import BaseHandler
 from gui.details.mgrCourseDetail import CourseDetailManager
 
 

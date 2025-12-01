@@ -1,7 +1,6 @@
 """
-Canvas LMS Automation - Lightweight Qt Router (Refactored)
-Original: 1824 lines → New: ~250 lines (86% reduction)
-All business logic moved to qt_utils/ handlers
+Canvas LMS Automation - Qt Router
+All business logic delegated to gui/handlers/
 """
 import sys, os, threading, subprocess, platform
 from datetime import datetime, timedelta
@@ -16,16 +15,13 @@ from gui.core.mgrDone import DoneManager
 from gui.widgets import rdrToast
 from gui.widgets.wgtMissionControl import MissionControl
 
-# Import all handlers
-from gui.qt_utils.window_handlers.launcher_handler import LauncherHandler
-from gui.qt_utils.window_handlers.main_window_handler import MainWindowHandler
-from gui.qt_utils.window_handlers.automation_window_handler import AutomationWindowHandler
-from gui.qt_utils.window_handlers.course_detail_window_handler import CourseDetailWindowHandler
-from gui.qt_utils.window_handlers.auto_detail_window_handler import AutoDetailWindowHandler
-from gui.qt_utils.window_handlers.sitting_window_handler import SittingWindowHandler
-from gui.qt_utils.event_handlers.keyboard_handler import KeyboardHandler
-from gui.qt_utils.initializers.ui_initializer import UIInitializer
-from gui.qt_utils.initializers.signal_initializer import SignalInitializer
+# Import handlers & initializers (flattened structure)
+from gui.handlers import (
+    LauncherHandler, MainWindowHandler, AutomationWindowHandler,
+    CourseDetailWindowHandler, AutoDetailWindowHandler,
+    SittingWindowHandler, KeyboardHandler
+)
+from gui.init import UIInitializer, SignalInitializer
 
 
 # === SIGNALS ===
@@ -291,7 +287,7 @@ class CanvasApp(QMainWindow):
         """Handle window resize - reposition floating sidebar"""
         super().resizeEvent(event)
         if hasattr(self, 'sidebar'):
-            from gui.qt_utils.initializers.ui_initializer import UIInitializer
+            from gui.init import UIInitializer
             UIInitializer._position_sidebar(self)
 
 

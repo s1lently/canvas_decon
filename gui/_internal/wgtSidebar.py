@@ -296,7 +296,7 @@ class GlobalSidebar(QWidget):
 
     def _get_default_tools(self):
         """Default tool actions (simple version, extensible for future)"""
-        from gui.core import utilQtInteract as qt_interact
+        from gui._internal import utilQtInteract as qt_interact
 
         return [
             {
@@ -322,6 +322,6 @@ class GlobalSidebar(QWidget):
             {
                 'icon': '🧹',
                 'text': 'Clean',
-                'callback': self.app.sitting_handler.show_clean_dialog
+                'callback': self.app.settings_view.show_clean_dialog
             }
         ]

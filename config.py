@@ -17,10 +17,13 @@ import json
 # 获取项目根目录(本文件所在目录)
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# JSON数据目录
-JSONS_DIR = os.path.join(ROOT_DIR, 'misc', 'jsons')
+# === AAFS: All Auto-generated Files Storage ===
+AAFS_DIR = os.path.join(ROOT_DIR, 'AAFS')
 
-# 数据文件路径(存放在misc/jsons/)
+# JSON数据目录
+JSONS_DIR = os.path.join(AAFS_DIR, 'jsons')
+
+# 数据文件路径
 COOKIES_FILE = os.path.join(JSONS_DIR, 'cookies.json')
 ACCOUNT_CONFIG_FILE = os.path.join(ROOT_DIR, 'account_config.json')  # Keep in root (user config, gitignored)
 PERSONAL_INFO_FILE = os.path.join(JSONS_DIR, 'personal_info.json')
@@ -31,13 +34,13 @@ LEARN_PREFERENCES_FILE = os.path.join(JSONS_DIR, 'learn_preferences.json')
 DONE_FILE = os.path.join(JSONS_DIR, 'Done.txt')
 
 # TODO 工作目录 (统一自动化工作空间)
-TODO_DIR = os.path.join(ROOT_DIR, 'todo')
+TODO_DIR = os.path.join(AAFS_DIR, 'todo')
 
 # 课程文件系统 (统一管理所有课程资料)
-COURSES_DIR = os.path.join(ROOT_DIR, 'Courses')
+COURSES_DIR = os.path.join(AAFS_DIR, 'courses')
 
 # 输出目录 (统一所有生成文件: quiz + homework)
-OUTPUT_DIR = os.path.join(ROOT_DIR, 'output')
+OUTPUT_DIR = os.path.join(AAFS_DIR, 'output')
 
 # Legacy compatibility
 SUBMISSION_DIR = OUTPUT_DIR
@@ -165,7 +168,8 @@ DO NOT generate images for text-only calculation questions or written reflection
 
 def ensure_dirs():
     """确保所有必要的目录存在"""
+    os.makedirs(AAFS_DIR, exist_ok=True)
     os.makedirs(JSONS_DIR, exist_ok=True)
     os.makedirs(TODO_DIR, exist_ok=True)
     os.makedirs(COURSES_DIR, exist_ok=True)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)  # For CLI debugging
+    os.makedirs(OUTPUT_DIR, exist_ok=True)

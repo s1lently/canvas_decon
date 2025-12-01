@@ -1,27 +1,18 @@
 #!/usr/bin/env python3
-"""
-Canvas LMS Automation - Main Entry Point
-Refactored: Uses modular Handler architecture
-"""
+"""Canvas LMS Automation - Main Entry Point"""
 import sys
 from PyQt6.QtWidgets import QApplication
 
 import config
-from gui.qt import CanvasApp
-from gui.config.cfgStyles import DARK_THEME
+from gui.app import CanvasApp
 
 
 def main():
     """Main entry point"""
-    # Ensure all required directories exist
     config.ensure_dirs()
-
     app = QApplication(sys.argv)
-    app.setStyleSheet(DARK_THEME)
-
     window = CanvasApp()
     window.show()
-
     sys.exit(app.exec())
 
 

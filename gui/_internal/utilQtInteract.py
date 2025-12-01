@@ -19,8 +19,7 @@ def on_get_cookie_clicked(tw, mw=None):
         return
 
     def run(progress):
-        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'login')))
-        from getCookie import main
+        from func.logCookie import main
         main(progress=progress)
 
     def on_success():
@@ -135,8 +134,7 @@ def on_clean_clicked(tw, mw=None):
         return
 
     def run(progress):
-        sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-        from clean import preview_deletion, clean_directory
+        from func.clean import preview_deletion, clean_directory
 
         progress.update(progress=10, status="Scanning files...")
         td = preview_deletion()
@@ -319,7 +317,7 @@ def on_learn_material_clicked(canvas_app, console_widget=None):
     # Get default prompt from preferences or fall back to built-in default
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'func'))
     from procLearnMaterial import get_default_prompt
-    from gui.learn.cfgLearnPrefs import get_prompt
+    from gui.learn import get_prompt
 
     # Determine prompt type
     ext = os.path.splitext(file_path)[1].lower()

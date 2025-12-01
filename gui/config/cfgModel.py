@@ -1,8 +1,8 @@
-"""GUI模型配置 - 调用统一的utilModels"""
+"""GUI Model Config"""
 import os, json, sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import config
-from func.utilModels import get_gemini_models, get_claude_models, get_all_models as _get_all_models
+from func.ai import get_gemini_models, get_claude_models, get_all_models as _get_all_models
 
 DEFAULT_CONFIG_PATH = os.path.join(config.TODO_DIR, 'default.json')
 

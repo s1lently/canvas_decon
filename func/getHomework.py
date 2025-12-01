@@ -6,7 +6,7 @@ from html import unescape
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
-from func import utilPromptFiles
+from func import ai as utilPromptFiles  # Compatibility alias
 from core.log import log
 
 TARGET_URL = "https://psu.instructure.com/courses/2418560/assignments/17474475"

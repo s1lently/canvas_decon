@@ -201,8 +201,7 @@ class CourseDetailWindowHandler(BaseHandler):
                 progress.update(progress=14, status="Step 1/7: Selecting model...")
 
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../..', 'func'))
-                from utilPromptFiles import upload_files, call_ai
-                from utilModels import get_best_gemini_model
+                from ai import upload_files, call_ai, get_best_gemini_model
                 from utilPdfSplitter import split_pdf_by_chapters
                 from utilPdfBookmark import extract_chapters_from_bookmarks, format_bookmark_chapters, repair_pdf_references
                 from PyPDF2 import PdfReader, PdfWriter

@@ -131,7 +131,7 @@ def refresh_available_models():
         dict: Updated available_models dict
     """
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-    from func.utilModels import get_gemini_models, get_claude_models
+    from func.ai import get_gemini_models, get_claude_models
 
     available_models = {
         'Auto': ['Auto'],
@@ -206,7 +206,7 @@ def get_resolved_product_model():
 
     # Import here to avoid circular dependency
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../..'))
-    from func.utilModels import get_best_gemini_model, get_best_claude_model
+    from func.ai import get_best_gemini_model, get_best_claude_model
 
     # Resolve product
     if product == 'Auto':

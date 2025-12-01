@@ -4,7 +4,7 @@ from urllib.parse import urljoin, unquote, urlparse
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
-from func import utilPromptFiles
+from func import ai as utilPromptFiles  # Compatibility alias
 BASE_QUIZ_URL = "https://psu.instructure.com/courses/2405803/quizzes/5363417"
 OUT = config.OUTPUT_DIR
 def start_quiz(s, url):

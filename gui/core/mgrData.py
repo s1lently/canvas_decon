@@ -17,20 +17,29 @@ class DataManager:
 
     def _load_courses(self):
         if os.path.exists(config.COURSE_FILE):
-            try: self.data['courses'] = json.load(open(config.COURSE_FILE)).get('courses', [])
-            except: pass
+            try:
+                with open(config.COURSE_FILE, 'r', encoding='utf-8') as f:
+                    self.data['courses'] = json.load(f).get('courses', [])
+            except (json.JSONDecodeError, IOError, KeyError):
+                pass
 
     def _load_todos(self):
         tf = config.TODOS_FILE
         if os.path.exists(tf):
-            try: self.data['todos'] = json.load(open(tf))
-            except: pass
+            try:
+                with open(tf, 'r', encoding='utf-8') as f:
+                    self.data['todos'] = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
 
     def _load_history_todos(self):
         hf = config.HIS_TODO_FILE
         if os.path.exists(hf):
-            try: self.data['history_todos'] = json.load(open(hf))
-            except: pass
+            try:
+                with open(hf, 'r', encoding='utf-8') as f:
+                    self.data['history_todos'] = json.load(f)
+            except (json.JSONDecodeError, IOError):
+                pass
 
     def _load_files(self):
         if os.path.exists(config.TODO_DIR):

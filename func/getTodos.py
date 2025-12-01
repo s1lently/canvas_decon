@@ -29,18 +29,27 @@ def extract_file_ids(description):
     return result
 
 def sanitize_folder_name(name):
-    invalid_chars = r'<>:"/\|?*'
-    for char in invalid_chars:
-        name = name.replace(char, '_')
-    name = name.strip('. ')
-    return name
+    """Sanitize folder name - delegates to core.security for safety"""
+    try:
+        from core.security import sanitize_path
+        return sanitize_path(name)
+    except ImportError:
+        # Fallback if core not available (backward compat)
+        import re
+        if not name:
+            return "unnamed"
+        name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', '_', name)
+        while '..' in name:
+            name = name.replace('..', '_')
+        name = name.strip('. /\\')
+        return name or "unnamed"
 
 def create_assignment_folder(base_dir, assignment_name, due_date):
     if due_date:
         try:
             dt = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
             date_suffix = dt.strftime("%Y%m%d_%H%M%S")
-        except:
+        except (ValueError, AttributeError):
             date_suffix = "no_date"
     else:
         date_suffix = "no_date"
@@ -176,10 +185,10 @@ def fetch_assignment_details(session, assignment_url, assignment_name, due_date,
                         quiz_metadata['attempts_left'] = quiz_metadata['allowed_attempts'] - quiz_metadata['attempt']
                     else:
                         quiz_metadata['attempts_left'] = 999
-            except:
+            except (requests.RequestException, json.JSONDecodeError, KeyError, IndexError):
                 quiz_metadata['attempt'] = 0
                 quiz_metadata['attempts_left'] = 999
-                
+
             result['quiz_metadata'] = quiz_metadata
             
             if assignment_data.get('quiz_type') == 'assignment' and assignment_data.get('published'):
@@ -208,7 +217,7 @@ def fetch_planner_items_page(session, page, start_date, end_date):
         r = session.get(f"{config.CANVAS_BASE_URL}/api/v1/planner/items", params=params, timeout=10)
         if r.status_code == 200:
             return r.json()
-    except:
+    except (requests.RequestException, json.JSONDecodeError):
         pass
     return []
 
@@ -237,14 +246,14 @@ def get_todos_concurrent(session, days=365, progress=None):
     total_pages = 1
     try:
         r = session.head(
-            f"{config.CANVAS_BASE_URL}/api/v1/planner/items", 
+            f"{config.CANVAS_BASE_URL}/api/v1/planner/items",
             params={'start_date': start_date, 'end_date': end_date, 'per_page': 100}
         )
         if 'last' in r.links:
             match = re.search(r'[?&]page=(\d+)', r.links['last']['url'])
             if match:
                 total_pages = int(match.group(1))
-    except:
+    except (requests.RequestException, KeyError, AttributeError):
         pass
     
     print(f"  Detected {total_pages} pages of items")
@@ -298,7 +307,7 @@ def process_and_save_todos_concurrent(todos, session, progress=None):
         try:
             with open(output_path, 'r', encoding='utf-8') as f:
                 existing = {t.get('redirect_url'): t for t in json.load(f) if t.get('redirect_url')}
-        except:
+        except (json.JSONDecodeError, IOError, TypeError):
             pass
 
     todo_dir = config.TODO_DIR
@@ -372,7 +381,7 @@ def process_and_save_todos_concurrent(todos, session, progress=None):
         d = t.get('due_date')
         try:
             return datetime.fromisoformat(d.replace('Z', '+00:00')) if d else datetime.max
-        except:
+        except (ValueError, AttributeError):
             return datetime.max
             
     result = sorted(existing.values(), key=parse_due)

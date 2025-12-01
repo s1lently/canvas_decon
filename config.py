@@ -48,17 +48,31 @@ def _load_account_config():
     """Load configuration from account_config.json"""
     try:
         if os.path.exists(ACCOUNT_CONFIG_FILE):
-            with open(ACCOUNT_CONFIG_FILE) as f:
+            with open(ACCOUNT_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-    except:
-        pass
+    except json.JSONDecodeError as e:
+        print(f"[WARN] Invalid account_config.json: {e}")
+    except IOError as e:
+        print(f"[WARN] Cannot read account_config.json: {e}")
     return {}
 
 _config = _load_account_config()
 
-# API 配置 (从account_config读取，否则使用默认值)
-GEMINI_API_KEY = _config.get('gemini_api_key', 'AIzaSyBZTx5UDH7pxyYZUgpDzKHRU25FWoPIA8I')
-CLAUDE_API_KEY = _config.get('claude_api_key', '')
+# API Keys: Priority order = config file > environment variable > None
+# SECURITY: Never provide default API keys in code
+GEMINI_API_KEY = _config.get('gemini_api_key') or os.environ.get('GEMINI_API_KEY')
+CLAUDE_API_KEY = _config.get('claude_api_key') or os.environ.get('CLAUDE_API_KEY')
+
+def get_api_key(provider: str) -> str:
+    """Get API key with validation. Raises ConfigError if missing."""
+    from core.exceptions import ConfigError
+    key = GEMINI_API_KEY if provider.lower() == 'gemini' else CLAUDE_API_KEY
+    if not key:
+        raise ConfigError(
+            f"{provider.upper()}_API_KEY not configured. "
+            f"Set in account_config.json or {provider.upper()}_API_KEY env var."
+        )
+    return key
 
 # Canvas URLs (从account_config读取，否则使用默认值)
 CANVAS_BASE_URL = _config.get('preference', {}).get('base_url', 'https://psu.instructure.com')
@@ -67,10 +81,12 @@ def reload_config():
     """Reload configuration from account_config.json"""
     global _config, GEMINI_API_KEY, CLAUDE_API_KEY, CANVAS_BASE_URL
     _config = _load_account_config()
-    GEMINI_API_KEY = _config.get('gemini_api_key', 'AIzaSyBZTx5UDH7pxyYZUgpDzKHRU25FWoPIA8I')
-    CLAUDE_API_KEY = _config.get('claude_api_key', '')
+    GEMINI_API_KEY = _config.get('gemini_api_key') or os.environ.get('GEMINI_API_KEY')
+    CLAUDE_API_KEY = _config.get('claude_api_key') or os.environ.get('CLAUDE_API_KEY')
     CANVAS_BASE_URL = _config.get('preference', {}).get('base_url', 'https://psu.instructure.com')
-    print(f"[INFO] Config reloaded. Gemini: {GEMINI_API_KEY[:4]}... Claude: {CLAUDE_API_KEY[:4]}...")
+    gemini_preview = f"{GEMINI_API_KEY[:8]}..." if GEMINI_API_KEY else "(not set)"
+    claude_preview = f"{CLAUDE_API_KEY[:8]}..." if CLAUDE_API_KEY else "(not set)"
+    print(f"[INFO] Config reloaded. Gemini: {gemini_preview} Claude: {claude_preview}")
 
 # Legacy compatibility
 ACCOUNT_INFO_FILE = ACCOUNT_CONFIG_FILE

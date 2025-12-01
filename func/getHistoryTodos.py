@@ -22,7 +22,7 @@ def get_courses_map(session):
         r = session.get(f"{config.CANVAS_BASE_URL}/api/v1/courses", params={'per_page': 100})
         courses = r.json()
         return {str(c['id']): c.get('name', 'Unknown') for c in courses}
-    except:
+    except (requests.RequestException, json.JSONDecodeError, KeyError, TypeError):
         return {}
 
 def get_assignment_details(session, course_id, assignment_id):
@@ -32,7 +32,7 @@ def get_assignment_details(session, course_id, assignment_id):
         r = session.get(url, timeout=5)
         if r.status_code == 200:
             return r.json()
-    except:
+    except (requests.RequestException, json.JSONDecodeError):
         pass
     return None
 
@@ -47,7 +47,7 @@ def convert_submission_to_todo_format(submission, session, courses_map):
         course_idx = parts.index('courses')
         course_id = parts[course_idx + 1]
         assignment_id = str(submission.get('assignment_id', ''))
-    except:
+    except (ValueError, IndexError):
         return None
 
     # Get course name
@@ -129,7 +129,7 @@ def get_total_pages(session, per_page=100):
             match = re.search(r'[?&]page=(\d+)', last_url)
             if match:
                 return int(match.group(1))
-    except:
+    except (requests.RequestException, KeyError, AttributeError):
         pass
     # If no Link header or failed, try page 2 check or just default to assumption
     return 1
@@ -144,7 +144,7 @@ def fetch_page(session, page, per_page):
         )
         if r.status_code == 200:
             return r.json()
-    except:
+    except (requests.RequestException, json.JSONDecodeError):
         pass
     return []
 
@@ -223,10 +223,10 @@ def get_history_todos(session, progress=None):
                             if due_date > now:
                                 skipped_future += 1
                                 continue
-                        except:
+                        except (ValueError, AttributeError):
                             pass
                     history_todos.append(todo)
-            except Exception as e:
+            except (concurrent.futures.CancelledError, concurrent.futures.TimeoutError):
                 pass
             
             # Progress update

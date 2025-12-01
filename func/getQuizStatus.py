@@ -7,8 +7,11 @@ import config
 def create_session():
     s = requests.Session()
     s.headers.update({'User-Agent': 'Mozilla/5.0', 'Accept': 'application/json'})
-    try: s.cookies.update({c['name']: c['value'] for c in json.load(open(config.COOKIES_FILE))})
-    except: pass
+    try:
+        with open(config.COOKIES_FILE, 'r') as f:
+            s.cookies.update({c['name']: c['value'] for c in json.load(f)})
+    except (IOError, json.JSONDecodeError, KeyError, TypeError):
+        pass
     return s
 
 def get_quiz_status(url):

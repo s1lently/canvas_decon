@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QStyledItemDelegate, QWidget, QLabel, QHBoxLayout,
                               QVBoxLayout, QGraphicsDropShadowEffect, QCheckBox,
                               QProgressBar, QTextEdit, QSplitter, QTabWidget)
 from PyQt6.QtGui import QPainter, QColor, QFont, QPen
-from PyQt6.QtCore import (Qt, QPoint, QRect, QTimer, QPropertyAnimation,
+from PyQt6.QtCore import (Qt, QPoint, QRect, QSize, QTimer, QPropertyAnimation,
                           QEasingCurve, pyqtProperty, QRectF, QPointF)
 from datetime import datetime
 
@@ -59,13 +59,26 @@ class TodoItemDelegate(QStyledItemDelegate):
         'discussion': 'DS'
     }
 
-    def __init__(self, parent=None, history_mode=False):
+    COURSE_COLORS = {
+        'CMPSC': QColor(239, 68, 68),    # red
+        'MATH': QColor(245, 158, 11),    # orange
+        'CHEM': QColor(168, 85, 247),    # purple
+        'BISC': QColor(16, 185, 129),    # green
+        'A-I': QColor(59, 130, 246),     # blue
+    }
+
+    def __init__(self, parent=None, history_mode=False, launcher_mode=False):
         super().__init__(parent)
         self.history_mode = history_mode
+        self.launcher_mode = launcher_mode
 
     def paint(self, p, opt, idx):
         from PyQt6.QtWidgets import QStyle
         is_selected = opt.state & QStyle.StateFlag.State_Selected
+
+        if self.launcher_mode:
+            self._paint_launcher_card(p, opt, idx)
+            return
 
         todo = idx.data(Qt.ItemDataRole.UserRole + 1)
         urgency_color = None
@@ -158,10 +171,201 @@ class TodoItemDelegate(QStyledItemDelegate):
 
         p.restore()
 
+    def _paint_launcher_card(self, p, opt, idx):
+        """Paint launcher-style card with course code, task name, date, and type tag"""
+        from PyQt6.QtWidgets import QStyle
+        import math
+
+        is_selected = opt.state & QStyle.StateFlag.State_Selected
+        todo = idx.data(Qt.ItemDataRole.UserRole + 1)
+        if not todo:
+            return
+
+        p.save()
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+
+        # Card geometry with margins
+        margin = 4
+        card_rect = opt.rect.adjusted(margin, margin, -margin, -margin)
+
+        # Background
+        bg_color = QColor(34, 27, 33) if is_selected else QColor(24, 27, 33)
+        p.setBrush(bg_color)
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(card_rect, 12, 12)
+
+        # Left border (course color)
+        course_name = todo.get('course_name', '')
+        course_prefix = course_name.split()[0] if course_name else ''
+        border_color = self.COURSE_COLORS.get(course_prefix, QColor(59, 130, 246))
+        border_rect = QRectF(card_rect.left(), card_rect.top(), 4, card_rect.height())
+        p.setBrush(border_color)
+        p.drawRoundedRect(border_rect, 2, 2)
+
+        # Text area
+        text_x = card_rect.left() + 20
+        text_y = card_rect.top() + 10
+        text_width = card_rect.width() - 140
+
+        # Course code (small, gray, monospace)
+        code_font = QFont('SF Mono, Consolas, monospace')
+        code_font.setPointSize(9)
+        p.setFont(code_font)
+        p.setPen(QColor(139, 148, 158))
+        p.drawText(QRectF(text_x, text_y, text_width, 16),
+                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop,
+                   course_name)
+
+        # Task name (normal size, white)
+        task_font = QFont()
+        task_font.setPointSize(10)
+        task_font.setWeight(QFont.Weight.Medium)
+        p.setFont(task_font)
+        p.setPen(QColor(224, 224, 224))
+        task_name = todo.get('name', '')
+        p.drawText(QRectF(text_x, text_y + 20, text_width, 20),
+                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                   task_name)
+
+        # Right side: date and type tag
+        right_x = card_rect.right() - 10
+        right_y = card_rect.center().y()
+
+        # Type tag (small, gray background)
+        m = idx.data(Qt.ItemDataRole.UserRole)
+        type_label = ''
+        if m and 'dots' in m:
+            dots = m['dots']
+            if dots.get('quiz'):
+                type_label = 'QZ'
+            elif dots.get('discussion'):
+                type_label = 'DB'
+            else:
+                type_label = 'HW'
+
+        tag_font = QFont()
+        tag_font.setPointSize(8)
+        p.setFont(tag_font)
+        tag_width = 24
+        tag_height = 18
+        tag_rect = QRectF(right_x - tag_width, right_y - tag_height/2, tag_width, tag_height)
+        p.setBrush(QColor(255, 255, 255, 26))
+        p.setPen(Qt.PenStyle.NoPen)
+        p.drawRoundedRect(tag_rect, 4, 4)
+        p.setPen(QColor(139, 148, 158))
+        p.drawText(tag_rect, Qt.AlignmentFlag.AlignCenter, type_label)
+
+        # Date (colored by urgency) with flame icon for urgent tasks
+        due_date = todo.get('due_date') or todo.get('assignment_details', {}).get('due_at')
+        if due_date:
+            try:
+                dt = datetime.fromisoformat(due_date.replace('Z', '+00:00'))
+                now = datetime.now(dt.tzinfo)
+                hours_left = (dt - now).total_seconds() / 3600
+
+                date_text = dt.strftime('%m/%d')
+                show_flame = False
+
+                # Color by urgency levels
+                if hours_left <= 0:
+                    date_color = QColor(239, 68, 68)  # red (overdue)
+                    show_flame = True
+                elif hours_left <= 24:
+                    date_color = QColor(239, 68, 68)  # red (<24h)
+                    show_flame = True
+                elif hours_left <= 72:  # 1-3 days
+                    date_color = QColor(245, 158, 11)  # orange
+                elif hours_left <= 168:  # 3-7 days
+                    date_color = QColor(234, 179, 8)  # yellow
+                else:
+                    date_color = QColor(139, 148, 158)  # gray
+
+                date_font = QFont()
+                date_font.setPointSize(9)
+                date_font.setBold(True)
+                p.setFont(date_font)
+                p.setPen(date_color)
+
+                date_rect = p.fontMetrics().boundingRect(date_text)
+                flame_width = 12 if show_flame else 0
+                total_width = date_rect.width() + flame_width + (3 if show_flame else 0)
+                date_x = right_x - tag_width - total_width - 10
+
+                # Draw date text
+                p.drawText(QRectF(date_x, right_y - 10, date_rect.width(), 20),
+                          Qt.AlignmentFlag.AlignCenter, date_text)
+
+                # Draw flame icon for urgent tasks
+                if show_flame:
+                    flame_font = QFont()
+                    flame_font.setPointSize(11)
+                    p.setFont(flame_font)
+                    flame_x = date_x + date_rect.width() + 3
+                    p.drawText(QRectF(flame_x, right_y - 10, flame_width, 20),
+                              Qt.AlignmentFlag.AlignCenter, '🔥')
+            except:
+                pass
+
+        p.restore()
+
     def sizeHint(self, opt, idx):
         s = super().sizeHint(opt, idx)
-        s.setHeight(max(s.height(), 36))
+        if self.launcher_mode:
+            s.setHeight(max(s.height(), 60))  # Taller cards for launcher
+        else:
+            s.setHeight(max(s.height(), 36))
         return s
+
+
+class CourseItemDelegate(QStyledItemDelegate):
+    """Delegate for launcher course list - shows course name and code"""
+    def paint(self, p, opt, idx):
+        p.save()
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+
+        # Get course name
+        course_name = idx.data(Qt.ItemDataRole.DisplayRole)
+        if not course_name:
+            p.restore()
+            return
+
+        # Split into name and details (assuming format: "Course Name (CODE 123)")
+        # Or just use the full name if no details
+        y_base = opt.rect.top() + 18
+        x = opt.rect.left()
+
+        # Course name (large, white)
+        name_font = QFont()
+        name_font.setPointSize(13)
+        name_font.setWeight(QFont.Weight.DemiBold)
+        p.setFont(name_font)
+        p.setPen(QColor(224, 224, 224))
+        p.drawText(QRectF(x, y_base, opt.rect.width(), 20),
+                   Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                   course_name)
+
+        # Course details stored in UserRole if available
+        details = idx.data(Qt.ItemDataRole.UserRole)
+        if details:
+            detail_font = QFont('SF Mono, Consolas, monospace')
+            detail_font.setPointSize(10)
+            p.setFont(detail_font)
+            p.setPen(QColor(139, 148, 158))
+            p.drawText(QRectF(x, y_base + 22, opt.rect.width(), 18),
+                      Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+                      details)
+
+        # Bottom border line (subtle divider) - thicker and more spacing
+        p.setPen(QPen(QColor(255, 255, 255, 20), 2))  # Thicker line, slightly more opaque
+        p.drawLine(QPoint(opt.rect.left(), opt.rect.bottom() - 1),
+                   QPoint(opt.rect.right(), opt.rect.bottom() - 1))
+
+        p.restore()
+
+    def sizeHint(self, opt, idx):
+        return QSize(opt.rect.width(), 70)  # Increased from 58 for more spacing
 
 
 # ============== TOAST ==============

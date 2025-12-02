@@ -130,15 +130,13 @@ class KeyboardHandler:
                 if ii >= 0:
                     item = lists[tab_idx].item(ii)
                     if item:
-                        todo = item.data(Qt.ItemDataRole.UserRole)
+                        todo = item.data(Qt.ItemDataRole.UserRole + 1)  # Fixed: was UserRole
 
             if todo:
-                meta = self.app.dm.classify_todo(todo)
-                if meta.get('is_automatable'):
-                    self.app.auto_detail_mgr = AutoDetailManager(todo)
-                    self.app.detail_view.populate_window()
-                    self.app.stacked_widget.setCurrentWidget(self.app.auto_detail_window)
-                    return True
+                self.app.auto_detail_mgr = AutoDetailManager(todo)
+                self.app.detail_view.populate_window()
+                self.app.stacked_widget.setCurrentWidget(self.app.auto_detail_window)
+                return True
 
         # Main window shortcuts
         if current == self.mw and not (modifiers & ~Qt.KeyboardModifier.ShiftModifier):

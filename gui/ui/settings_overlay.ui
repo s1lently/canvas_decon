@@ -15,17 +15,23 @@
   </property>
   <property name="styleSheet">
    <string>QWidget#SettingsOverlay {
-    background-color: rgba(10, 10, 10, 200);
+    background-color: rgba(0, 0, 0, 120);
    }
    QWidget#contentContainer {
     background-color: #1e1e1e;
-    border-radius: 12px;
+    border-radius: 20px;
     border: 1px solid #333;
    }
    QLabel {
     background-color: transparent;
    }
    QWidget#headerRightPlaceholder, QWidget#manualModeTogglePlaceholder {
+    background-color: transparent;
+   }
+   QSpacerItem {
+    background-color: transparent;
+   }
+   QVBoxLayout, QHBoxLayout {
     background-color: transparent;
    }
    QPushButton#backBtn {
@@ -87,7 +93,20 @@
     <number>0</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="centeringLayout">
+    <spacer name="topSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <spacer name="leftSpacer">
        <property name="orientation">
@@ -105,14 +124,14 @@
       <widget class="QWidget" name="contentContainer">
        <property name="minimumSize">
         <size>
-         <width>900</width>
-         <height>700</height>
+         <width>700</width>
+         <height>550</height>
         </size>
        </property>
        <property name="maximumSize">
         <size>
-         <width>1000</width>
-         <height>800</height>
+         <width>700</width>
+         <height>550</height>
         </size>
        </property>
        <layout class="QVBoxLayout" name="contentLayout">
@@ -826,6 +845,19 @@
       </spacer>
      </item>
     </layout>
+   </item>
+   <item>
+    <spacer name="bottomSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
    </item>
   </layout>
  </widget>

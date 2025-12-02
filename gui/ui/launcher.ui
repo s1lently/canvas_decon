@@ -7,240 +7,338 @@
   </property>
   <property name="styleSheet">
    <string>QWidget#LauncherOverlay {
-    background-color: rgba(10, 10, 10, 250);
+    background-color: #0f1115;
    }
-   QPushButton#closeBtn {
-    background-color: transparent;
-    border: none;
-    color: #ef4444;
-    font-size: 24px;
-    font-weight: bold;
+   QLabel#sectionHeader {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #8b949e;
+    font-weight: 500;
    }
-   QPushButton#closeBtn:hover {
-    color: #dc2626;
+   QLabel#semesterTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #e0e0e0;
    }
-   QLabel#projectTitle {
+   QLabel#sysStatus {
+    font-family: 'SF Mono', 'Consolas', monospace;
+    font-size: 9px;
+    color: #10b981;
+    letter-spacing: 1px;
+   }
+   QLabel#techTitle {
+    font-family: 'SF Mono', 'Consolas', monospace;
     font-size: 32px;
-    font-weight: bold;
-    color: #3b82f6;
+    font-weight: 800;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+   }
+   QListWidget {
+    background: transparent;
+    border: none;
+    outline: none;
+   }
+   QListWidget::item {
+    background: transparent;
+    border: none;
+   }
+   QListWidget#courseList::item {
+    padding: 16px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+   }
+   QWidget#centerPanel {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+   }
+   QWidget#titleContainer {
+    border-left: 4px solid #3b82f6;
+    padding-left: 16px;
+   }
+   QWidget#hudCorner {
+    background: transparent;
+    border: 2px solid #3b82f6;
    }</string>
   </property>
-  <layout class="QVBoxLayout" name="mainLayout">
+  <layout class="QHBoxLayout" name="mainLayout">
    <property name="spacing">
-    <number>0</number>
+    <number>40</number>
    </property>
    <property name="leftMargin">
-    <number>0</number>
+    <number>20</number>
    </property>
    <property name="topMargin">
-    <number>0</number>
+    <number>20</number>
    </property>
    <property name="rightMargin">
-    <number>0</number>
+    <number>20</number>
    </property>
    <property name="bottomMargin">
-    <number>0</number>
+    <number>20</number>
    </property>
    <item>
-    <layout class="QHBoxLayout" name="contentLayout">
+    <layout class="QVBoxLayout" name="leftSection">
      <property name="spacing">
-      <number>20</number>
-     </property>
-     <property name="leftMargin">
-      <number>20</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>20</number>
-     </property>
-     <property name="bottomMargin">
-      <number>20</number>
+      <number>15</number>
      </property>
      <item>
-      <widget class="QListWidget" name="todoList">
-       <property name="minimumWidth">
-        <number>450</number>
+      <widget class="QLabel" name="sectionHeader">
+       <property name="text">
+        <string>UPCOMING DEADLINES</string>
        </property>
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="centerLayout">
-       <property name="spacing">
-        <number>40</number>
+      <widget class="QListWidget" name="todoList">
+       <property name="minimumSize">
+        <size>
+         <width>450</width>
+         <height>0</height>
+        </size>
        </property>
-       <property name="leftMargin">
-        <number>40</number>
-       </property>
-       <property name="rightMargin">
-        <number>40</number>
-       </property>
-       <item>
-        <spacer name="topSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-       <item>
-        <widget class="QLabel" name="projectTitle">
-         <property name="text">
-          <string>Canvas LMS Automation</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <layout class="QVBoxLayout" name="buttonLayout">
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QWidget" name="centerPanel" native="true">
+     <property name="minimumSize">
+      <size>
+       <width>380</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>420</width>
+       <height>16777215</height>
+      </size>
+     </property>
+     <layout class="QVBoxLayout" name="centerLayout">
+      <property name="spacing">
+       <number>40</number>
+      </property>
+      <property name="leftMargin">
+       <number>40</number>
+      </property>
+      <property name="topMargin">
+       <number>40</number>
+      </property>
+      <property name="rightMargin">
+       <number>40</number>
+      </property>
+      <property name="bottomMargin">
+       <number>40</number>
+      </property>
+      <item>
+       <spacer name="topSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QWidget" name="titleContainer" native="true">
+        <layout class="QVBoxLayout" name="titleLayout">
          <property name="spacing">
-          <number>16</number>
+          <number>8</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
          </property>
          <item>
-          <widget class="QPushButton" name="dashboardBtn">
+          <widget class="QLabel" name="sysStatus">
            <property name="text">
-            <string>Dashboard</string>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string>QPushButton {
-    background-color: #3b82f6;
-    color: white;
-    font-size: 17px;
-    font-weight: bold;
-    border: none;
-    border-radius: 12px;
-   }
-   QPushButton:hover {
-    background-color: #2563eb;
-   }
-   QPushButton:pressed {
-    background-color: #1d4ed8;
-   }</string>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
+            <string>● SYSTEM ONLINE // V.2.0.5</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="automationBtn">
+          <widget class="QLabel" name="techTitle">
            <property name="text">
-            <string>Automation</string>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string>QPushButton {
-    background-color: #1a1a1a;
-    color: #ededed;
-    font-size: 17px;
-    font-weight: bold;
-    border: 2px solid #3b82f6;
-    border-radius: 12px;
-   }
-   QPushButton:hover {
-    background-color: #2a2a2a;
-    border-color: #2563eb;
-   }
-   QPushButton:pressed {
-    background-color: #3a3a3a;
-   }</string>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="settingsBtn">
-           <property name="text">
-            <string>Settings</string>
-           </property>
-           <property name="minimumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>280</width>
-             <height>55</height>
-            </size>
-           </property>
-           <property name="styleSheet">
-            <string>QPushButton {
-    background-color: #1a1a1a;
-    color: #ededed;
-    font-size: 17px;
-    font-weight: bold;
-    border: 2px solid #3b82f6;
-    border-radius: 12px;
-   }
-   QPushButton:hover {
-    background-color: #2a2a2a;
-    border-color: #2563eb;
-   }
-   QPushButton:pressed {
-    background-color: #3a3a3a;
-   }</string>
-           </property>
-           <property name="cursor">
-            <cursorShape>PointingHandCursor</cursorShape>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;CANVAS&lt;br/&gt;AUTOMATION&lt;span style=&quot; color:#8b949e;&quot;&gt;_&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
         </layout>
-       </item>
-       <item>
-        <spacer name="bottomSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
-         </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
-       </item>
-      </layout>
+       </widget>
+      </item>
+      <item>
+       <layout class="QVBoxLayout" name="buttonLayout">
+        <property name="spacing">
+         <number>15</number>
+        </property>
+        <item>
+         <widget class="QPushButton" name="dashboardBtn">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>80</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>LAUNCH DASHBOARD →</string>
+          </property>
+          <property name="cursor">
+           <cursorShape>PointingHandCursor</cursorShape>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QPushButton#dashboardBtn {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #3b82f6, stop:1 #1e40af);
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+}
+QPushButton#dashboardBtn:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f8ff7, stop:1 #2563eb);
+}</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="subButtonLayout">
+          <property name="spacing">
+           <number>15</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="automationBtn">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>55</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>AUTOMATION</string>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton#automationBtn {
+    background: rgba(255, 255, 255, 0.03);
+    color: #8b949e;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    text-align: center;
+}
+QPushButton#automationBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #3b82f6;
+    color: #e0e0e0;
+}</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="settingsBtn">
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>55</height>
+             </size>
+            </property>
+            <property name="text">
+             <string>SETTINGS</string>
+            </property>
+            <property name="cursor">
+             <cursorShape>PointingHandCursor</cursorShape>
+            </property>
+            <property name="styleSheet">
+             <string notr="true">QPushButton#settingsBtn {
+    background: rgba(255, 255, 255, 0.03);
+    color: #8b949e;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    text-align: center;
+}
+QPushButton#settingsBtn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: #3b82f6;
+    color: #e0e0e0;
+}</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <spacer name="bottomSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>40</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QVBoxLayout" name="rightSection">
+     <property name="spacing">
+      <number>30</number>
+     </property>
+     <item>
+      <widget class="QLabel" name="semesterTitle">
+       <property name="text">
+        <string>Fall 2025</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QListWidget" name="courseList">
-       <property name="minimumWidth">
-        <number>450</number>
+       <property name="minimumSize">
+        <size>
+         <width>450</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">QListWidget#courseList {
+    background: transparent;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #e0e0e0;
+}
+QListWidget#courseList::item {
+    padding: 18px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+QListWidget#courseList::item:last {
+    border-bottom: none;
+}</string>
        </property>
       </widget>
      </item>

@@ -24,6 +24,7 @@ class MainView:
         """Show launcher overlay"""
         self._populate_launcher()
         self.update_launcher_geometry()
+        self.app._position_hud_corners()  # Position HUD corners
         self.lo.raise_()
         self.lo.show()
 
@@ -47,19 +48,32 @@ class MainView:
             self.lo.todoList.addItem(item)
 
         for course in self.app.dm.get('courses'):
-            self.lo.courseList.addItem(course.get('name', 'Unknown'))
+            course_name = course.get('name', 'Unknown')
+            # Try to extract course code and section from name
+            # Example: "CMPSC 131, Section 005: Programming & Comp I" -> "CMPSC 131 • Section 005"
+            details = ''
+            display_name = course_name
+            if ',' in course_name and ':' in course_name:
+                parts = course_name.split(':')
+                if len(parts) > 1:
+                    details = parts[0].replace(',', ' •')
+                    display_name = parts[1].strip()
+
+            item = QListWidgetItem(display_name)
+            if details:
+                item.setData(Qt.ItemDataRole.UserRole, details)
+            item.setData(Qt.ItemDataRole.UserRole + 1, course)  # Store full course object
+            self.lo.courseList.addItem(item)
 
     def on_course_double_clicked(self, item):
         """Launcher: double-click course -> CourseDetail"""
-        course_name = item.text()
-        for course in self.app.dm.get('courses'):
-            if course.get('name') == course_name:
-                self.app.course_detail_mgr = CourseDetailManager(
-                    course, self.app.dm.get('todos'), self.app.dm.get('history_todos'))
-                self.app.course_view.populate_window()
-                self.hide_launcher()
-                self.app.stacked_widget.setCurrentWidget(self.app.course_detail_window)
-                break
+        course = item.data(Qt.ItemDataRole.UserRole + 1)
+        if course:
+            self.app.course_detail_mgr = CourseDetailManager(
+                course, self.app.dm.get('todos'), self.app.dm.get('history_todos'))
+            self.app.course_view.populate_window()
+            self.hide_launcher()
+            self.app.stacked_widget.setCurrentWidget(self.app.course_detail_window)
 
     def on_todo_double_clicked(self, item):
         """Launcher: double-click todo -> AutoDetail"""
@@ -76,6 +90,7 @@ class MainView:
         il = self.mw.itemList
         il.clear()
         self.mw.courseDetailBtn.setVisible(index == 0)
+        self.mw.filterWidget.setVisible(index == 1)  # Show filters only for TODOs
 
         if index == 0:  # Courses
             for c in self.app.dm.get('courses'):
@@ -178,7 +193,7 @@ class MainView:
 
         elif ci == 1:  # TODOs
             todo = item.data(Qt.ItemDataRole.UserRole + 1)
-            if todo and self.app.dm.classify_todo(todo).get('is_automatable'):
+            if todo:
                 self.app.auto_detail_mgr = AutoDetailManager(todo)
                 self.app.detail_view.populate_window()
                 self.app.stacked_widget.setCurrentWidget(self.app.auto_detail_window)

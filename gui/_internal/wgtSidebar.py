@@ -141,7 +141,7 @@ class GlobalSidebar(QWidget):
     """
 
     # Signals for navigation
-    navigate = pyqtSignal(str)  # 'launch', 'main', 'auto', 'sitting'
+    navigate = pyqtSignal(str)  # 'launch', 'main', 'auto', 'settings'
 
     def __init__(self, app, parent=None):
         super().__init__(parent)
@@ -191,7 +191,7 @@ class GlobalSidebar(QWidget):
             ('🏠', 'Launch', 'launch'),
             ('📋', 'Main', 'main'),
             ('⚡', 'Auto', 'auto'),
-            ('⚙️', 'Settings', 'sitting')
+            ('⚙️', 'Settings', 'settings')
         ]
 
         for icon, text, nav_id in nav_items:

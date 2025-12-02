@@ -45,8 +45,8 @@ def on_get_todo_clicked(tw, mw=None):
 
     def on_todos_success():
         if mw:
-            mw.main_handler.load_data()
-            mw.main_handler.on_category_changed(mw.main_window.categoryList.currentRow())
+            mw.main_view.load_data()
+            mw.main_view.on_category_changed(mw.main_window.categoryList.currentRow())
             mw.show_toast("TODOs Updated!", 'success')
 
     # Task 2: Fetch History
@@ -76,7 +76,7 @@ def on_get_course_clicked(tw, mw=None):
 
     def on_success():
         if mw:
-            mw.main_handler.load_data()
+            mw.main_view.load_data()
             mw.update_status()
             mw.show_toast("Courses Updated!", 'success')
 

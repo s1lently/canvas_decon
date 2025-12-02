@@ -263,76 +263,6 @@
          </item>
         </layout>
        </item>
-       <item>
-        <layout class="QHBoxLayout" name="filterLayout">
-        <property name="spacing">
-         <number>4</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="filterLabel">
-          <property name="text">
-           <string>Filters:</string>
-          </property>
-          <property name="styleSheet">
-           <string>font-size: 14px; font-weight: bold; margin-right: 8px;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="filterHomework">
-          <property name="text">
-           <string>● Homework</string>
-          </property>
-          <property name="styleSheet">
-           <string>font-size: 14px; color: #eab308;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="filterQuiz">
-          <property name="text">
-           <string>● Quiz</string>
-          </property>
-          <property name="styleSheet">
-           <string>font-size: 14px; color: #a855f7;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="filterDiscussion">
-          <property name="text">
-           <string>● Discussion</string>
-          </property>
-          <property name="styleSheet">
-           <string>font-size: 14px; color: #3b82f6;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QCheckBox" name="filterAutomatable">
-          <property name="text">
-           <string>● Automatable</string>
-          </property>
-          <property name="styleSheet">
-           <string>font-size: 14px; color: #ef4444;</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="filterSpacer">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>40</width>
-            <height>20</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-       </item>
       </layout>
       </item>
      </layout>
@@ -478,7 +408,7 @@
       <item>
        <widget class="QPushButton" name="sittingBtn">
         <property name="text">
-         <string>⚙️ Sitting</string>
+         <string>Settings</string>
         </property>
         <property name="minimumSize">
          <size>
@@ -539,11 +469,105 @@
        </layout>
       </item>
       <item>
-       <widget class="QListWidget" name="itemList">
-        <property name="minimumWidth">
-         <number>250</number>
+       <layout class="QVBoxLayout" name="itemColumnLayout">
+        <property name="spacing">
+         <number>4</number>
         </property>
-       </widget>
+        <item>
+         <widget class="QWidget" name="filterWidget">
+          <property name="maximumHeight">
+           <number>32</number>
+          </property>
+          <layout class="QHBoxLayout" name="filterLayout">
+           <property name="spacing">
+            <number>8</number>
+           </property>
+           <property name="leftMargin">
+            <number>0</number>
+           </property>
+           <property name="topMargin">
+            <number>0</number>
+           </property>
+           <property name="rightMargin">
+            <number>0</number>
+           </property>
+           <property name="bottomMargin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="filterLabel">
+             <property name="text">
+              <string>Filter:</string>
+             </property>
+             <property name="styleSheet">
+              <string>font-size: 12px; font-weight: 600; color: #888;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="filterHomework">
+             <property name="text">
+              <string>Homework</string>
+             </property>
+             <property name="styleSheet">
+              <string>font-size: 11px; color: #eab308;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="filterQuiz">
+             <property name="text">
+              <string>Quiz</string>
+             </property>
+             <property name="styleSheet">
+              <string>font-size: 11px; color: #a855f7;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="filterDiscussion">
+             <property name="text">
+              <string>Discussion</string>
+             </property>
+             <property name="styleSheet">
+              <string>font-size: 11px; color: #3b82f6;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QCheckBox" name="filterAutomatable">
+             <property name="text">
+              <string>Auto</string>
+             </property>
+             <property name="styleSheet">
+              <string>font-size: 11px; color: #ef4444;</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="filterSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QListWidget" name="itemList">
+          <property name="minimumWidth">
+           <number>250</number>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <layout class="QVBoxLayout" name="detailColumnLayout">
@@ -573,33 +597,6 @@
        </layout>
       </item>
      </layout>
-    </item>
-    <item>
-     <widget class="QTabWidget" name="consoleTabWidget">
-      <property name="minimumHeight">
-       <number>200</number>
-      </property>
-      <property name="tabsClosable">
-       <bool>true</bool>
-      </property>
-      <widget class="QWidget" name="defaultTab">
-       <attribute name="title">
-        <string>Main</string>
-       </attribute>
-       <layout class="QVBoxLayout" name="defaultTabLayout">
-        <item>
-         <widget class="QTextEdit" name="consoleOutput">
-          <property name="readOnly">
-           <bool>true</bool>
-          </property>
-          <property name="placeholderText">
-           <string>Command output will appear here...</string>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     </widget>
     </item>
    </layout>
   </widget>

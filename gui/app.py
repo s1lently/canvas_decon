@@ -102,7 +102,7 @@ class CanvasApp(QMainWindow):
 
         # === WINDOW ===
         self.setWindowTitle("Canvas LMS Automation")
-        self.resize(1600, 900)
+        self.resize(1200, 675)  # 3/4 of original size
         self.installEventFilter(self)
 
     def _connect_signals(self):
@@ -135,10 +135,13 @@ class CanvasApp(QMainWindow):
         self.launcher_overlay = loadUi(_resource_path('gui/ui/launcher.ui'))
         self.settings_overlay = loadUi(_resource_path('gui/ui/settings_overlay.ui'))
 
-        # Apply theme to all loaded windows
+        # Apply theme to all loaded windows (except settings_overlay which has its own transparent style)
         for w in [self.main_window, self.automation_window, self.course_detail_window,
-                  self.launcher_overlay, self.settings_overlay]:
+                  self.launcher_overlay]:
             w.setStyleSheet(get_app_stylesheet())
+
+        # Settings overlay keeps its own stylesheet for transparency
+        # Don't override with global theme
 
         # AutoDetail is pure Python widget
         from gui._internal.wgtAutoDetailModern import ModernAutoDetailWidget
@@ -187,14 +190,23 @@ class CanvasApp(QMainWindow):
         # Category list
         self.main_window.categoryList.addItems(["Courses", "TODOs", "Files"])
         self.main_window.courseDetailBtn.setVisible(False)
+        self.main_window.filterWidget.setVisible(False)  # Hidden until TODOs selected
 
         self.stacked_widget.setCurrentWidget(self.main_window)
 
         # Launcher overlay
         self.launcher_overlay.setParent(self.main_window)
         self.launcher_overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        from gui.widgets import TodoItemDelegate
-        self.launcher_overlay.todoList.setItemDelegate(TodoItemDelegate(self.launcher_overlay.todoList))
+        from gui.widgets import TodoItemDelegate, CourseItemDelegate
+        self.launcher_overlay.todoList.setItemDelegate(TodoItemDelegate(self.launcher_overlay.todoList, launcher_mode=True))
+        self.launcher_overlay.courseList.setItemDelegate(CourseItemDelegate(self.launcher_overlay.courseList))
+
+        # Add HUD corner decorations to centerPanel
+        self._add_hud_corners()
+
+        # Add colored icons to launcher buttons
+        self._add_launcher_button_icons()
+
         self.main_window.installEventFilter(self)
         self.launcher_overlay.todoList.installEventFilter(self)
         self.launcher_overlay.courseList.installEventFilter(self)
@@ -202,11 +214,108 @@ class CanvasApp(QMainWindow):
         # Settings overlay
         self.settings_overlay.setParent(self)
         self.settings_overlay.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.settings_overlay.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)  # Enable translucent background
+        self.settings_overlay.setAutoFillBackground(False)  # Allow transparency
+
+        # Ensure contentContainer has proper attributes for rounded corners
+        if hasattr(self.settings_overlay, 'contentContainer'):
+            self.settings_overlay.contentContainer.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+        # Block mouse events from passing through (prevent clicking through overlay)
+        self.settings_overlay.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+
         self.settings_overlay.hide()
         self.sitting_window = self.settings_overlay
 
+        # Install event filter for clicking outside to close
+        self.settings_overlay.installEventFilter(self)
+
         # Sidebar (deferred to after views are created)
         self.sidebar = None
+
+    def _add_launcher_button_icons(self):
+        """Add colored square icons to launcher buttons"""
+        from PyQt6.QtGui import QPixmap, QPainter, QIcon, QColor
+        from PyQt6.QtCore import QSize
+
+        def create_square_icon(color, size=8):
+            """Create a small colored square icon"""
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            painter.fillRect(0, 0, size, size, color)
+            painter.end()
+            return QIcon(pixmap)
+
+        # Automation button - orange square
+        orange_icon = create_square_icon(QColor(245, 158, 11))
+        self.launcher_overlay.automationBtn.setIcon(orange_icon)
+        self.launcher_overlay.automationBtn.setIconSize(QSize(8, 8))
+        self.launcher_overlay.automationBtn.setText("  AUTOMATION")
+
+        # Settings button - gray square
+        gray_icon = create_square_icon(QColor(107, 114, 128))
+        self.launcher_overlay.settingsBtn.setIcon(gray_icon)
+        self.launcher_overlay.settingsBtn.setIconSize(QSize(8, 8))
+        self.launcher_overlay.settingsBtn.setText("  SETTINGS")
+
+    def _add_hud_corners(self):
+        """Add HUD corner decorations to centerPanel"""
+        from PyQt6.QtWidgets import QWidget
+        from PyQt6.QtCore import Qt
+
+        center_panel = self.launcher_overlay.centerPanel
+        corner_size = 20
+        offset = -2
+
+        # Create corner widgets
+        positions = [
+            ('tl', offset, offset),  # top-left
+            ('tr', None, offset),    # top-right
+            ('bl', offset, None),    # bottom-left
+            ('br', None, None),      # bottom-right
+        ]
+
+        self.hud_corners = []
+        for name, left, top in positions:
+            corner = QWidget(center_panel)
+            corner.setObjectName('hudCorner')
+            corner.setFixedSize(corner_size, corner_size)
+            corner.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
+            # Set stylesheet for each corner (different borders removed)
+            if name == 'tl':
+                corner.setStyleSheet('QWidget#hudCorner { background: transparent; border: 2px solid #3b82f6; border-bottom: none; border-right: none; }')
+            elif name == 'tr':
+                corner.setStyleSheet('QWidget#hudCorner { background: transparent; border: 2px solid #3b82f6; border-bottom: none; border-left: none; }')
+            elif name == 'bl':
+                corner.setStyleSheet('QWidget#hudCorner { background: transparent; border: 2px solid #3b82f6; border-top: none; border-right: none; }')
+            elif name == 'br':
+                corner.setStyleSheet('QWidget#hudCorner { background: transparent; border: 2px solid #3b82f6; border-top: none; border-left: none; }')
+
+            self.hud_corners.append((corner, name, left, top))
+
+        # Position will be set in resizeEvent
+        center_panel.installEventFilter(self)
+
+    def _position_hud_corners(self):
+        """Position HUD corners on centerPanel"""
+        if not hasattr(self, 'hud_corners'):
+            return
+
+        center_panel = self.launcher_overlay.centerPanel
+        w, h = center_panel.width(), center_panel.height()
+
+        for corner, name, left, top in self.hud_corners:
+            offset = -2
+            if name == 'tl':
+                corner.move(offset, offset)
+            elif name == 'tr':
+                corner.move(w - corner.width() + abs(offset), offset)
+            elif name == 'bl':
+                corner.move(offset, h - corner.height() + abs(offset))
+            elif name == 'br':
+                corner.move(w - corner.width() + abs(offset), h - corner.height() + abs(offset))
 
     def _replace_placeholder(self, placeholder, widget):
         """Replace placeholder with widget"""
@@ -325,7 +434,7 @@ class CanvasApp(QMainWindow):
                 self.main_view.hide_launcher()
             elif page_id == 'auto':
                 self.auto_view.open()
-            elif page_id == 'sitting':
+            elif page_id == 'settings':
                 self.settings_view.show()
         self.sidebar.navigate.connect(navigate)
 
@@ -412,6 +521,21 @@ class CanvasApp(QMainWindow):
         if obj == self.main_window and event.type() == QEvent.Type.Resize:
             self.main_view.update_launcher_geometry()
             return False
+        if hasattr(self, 'launcher_overlay') and obj == self.launcher_overlay.centerPanel and event.type() == QEvent.Type.Resize:
+            self._position_hud_corners()
+            return False
+
+        # Settings overlay - click outside to close
+        if hasattr(self, 'settings_overlay') and obj == self.settings_overlay and event.type() == QEvent.Type.MouseButtonPress:
+            # Check if click is outside contentContainer
+            content = self.settings_overlay.contentContainer
+            if content:
+                click_pos = event.pos()
+                content_rect = content.geometry()
+                if not content_rect.contains(click_pos):
+                    self.settings_view.hide()
+                    return True
+
         if event.type() == QEvent.Type.KeyPress:
             if event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_M:
                 self.mission_control.setVisible(not self.mission_control.isVisible())

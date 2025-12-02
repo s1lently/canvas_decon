@@ -152,7 +152,7 @@ class ModernAutoDetailWidget(QWidget):
         header.setStyleSheet(f"""
             QFrame {{
                 background-color: {COLORS['bg_secondary']};
-                border-bottom: 1px solid {COLORS['border']};
+                border-bottom: 2px solid {COLORS['border']};
             }}
         """)
         header.setFixedHeight(70)
@@ -377,13 +377,14 @@ class ModernAutoDetailWidget(QWidget):
 
         self.thinkingBadge = QLabel("Thinking Mode")
         self.thinkingBadge.setStyleSheet(f"""
-            background-color: {COLORS['accent_purple']};
-            color: white;
-            padding: 4px 10px;
-            border-radius: 10px;
-            font-size: 11px;
+            background: rgba(163, 113, 247, 0.15);
+            color: {COLORS['accent_purple']};
+            border: 1px solid {COLORS['accent_purple']};
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 10px;
             font-weight: 600;
-            border: none;
+            letter-spacing: 0.3px;
         """)
         header.addWidget(self.thinkingBadge)
         layout.addLayout(header)
@@ -540,36 +541,40 @@ class ModernAutoDetailWidget(QWidget):
 
         # Tabs - functional switching between QesWA.md and questions.md
         tabs = QFrame()
-        tabs.setStyleSheet(f"background: transparent; border-bottom: 1px solid {COLORS['border']};")
+        tabs.setStyleSheet(f"background: {COLORS['bg_tertiary']}; border-bottom: 1px solid {COLORS['border']};")
         tabs_layout = QHBoxLayout(tabs)
-        tabs_layout.setContentsMargins(0, 0, 0, 0)
+        tabs_layout.setContentsMargins(12, 0, 12, 0)
+        tabs_layout.setSpacing(0)
 
         self.tabQesWA = QPushButton("QesWA.md")
         self.tabQuestions = QPushButton("questions.md")
         self._current_tab = 'qeswa'
 
-        # Tab styles
+        # Tab styles - minimalist with underline indicator
         self._tab_active_style = f"""
             QPushButton {{
-                background: {COLORS['bg_card']};
+                background: transparent;
                 border: none;
                 border-bottom: 2px solid {COLORS['accent_green']};
-                padding: 14px 20px;
-                font-size: 13px;
-                font-weight: 500;
-                color: {COLORS['accent_green']};
+                padding: 10px 16px;
+                font-size: 12px;
+                font-weight: 600;
+                color: {COLORS['text_primary']};
             }}
         """
         self._tab_inactive_style = f"""
             QPushButton {{
                 background: transparent;
                 border: none;
-                padding: 14px 20px;
-                font-size: 13px;
+                border-bottom: 2px solid transparent;
+                padding: 10px 16px;
+                font-size: 12px;
+                font-weight: 500;
                 color: {COLORS['text_muted']};
             }}
             QPushButton:hover {{
-                color: {COLORS['text_primary']};
+                color: {COLORS['text_secondary']};
+                border-bottom: 2px solid {COLORS['border']};
             }}
         """
 
@@ -648,21 +653,21 @@ class ModernAutoDetailWidget(QWidget):
             QFrame {{
                 background-color: {COLORS['bg_tertiary']};
                 border: none;
-                border-radius: 12px;
-                padding: 16px;
+                border-radius: 8px;
+                padding: 6px;
             }}
         """)
 
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(16, 12, 16, 12)
-        layout.setSpacing(4)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(1)
 
         label_widget = QLabel(label)
-        label_widget.setStyleSheet(f"font-size: 12px; color: {COLORS['text_muted']}; background: transparent;")
+        label_widget.setStyleSheet(f"font-size: 10px; color: {COLORS['text_muted']}; background: transparent;")
 
         value_widget = QLabel(value)
         color = COLORS['accent_green'] if highlight else COLORS['text_primary']
-        value_widget.setStyleSheet(f"font-size: 16px; font-weight: 600; color: {color}; background: transparent;")
+        value_widget.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {color}; background: transparent;")
 
         layout.addWidget(label_widget)
         layout.addWidget(value_widget)
@@ -670,25 +675,27 @@ class ModernAutoDetailWidget(QWidget):
         return card
 
     def _create_badge(self, text, color_type):
-        """Create a badge label"""
+        """Create a badge label with minimalist design"""
         colors = {
-            'purple': (COLORS['accent_purple'], 'rgba(163, 113, 247, 0.15)'),
-            'red': (COLORS['accent_red'], 'rgba(248, 81, 73, 0.15)'),
-            'green': (COLORS['accent_green'], 'rgba(63, 185, 80, 0.15)'),
-            'blue': (COLORS['accent_blue'], 'rgba(88, 166, 255, 0.15)'),
+            'purple': (COLORS['accent_purple'], COLORS['bg_tertiary']),
+            'red': (COLORS['accent_red'], COLORS['bg_tertiary']),
+            'green': (COLORS['accent_green'], COLORS['bg_tertiary']),
+            'blue': (COLORS['accent_blue'], COLORS['bg_tertiary']),
         }
         fg, bg = colors.get(color_type, colors['blue'])
 
         badge = QLabel(text)
         badge.setStyleSheet(f"""
-            background: {bg};
+            background: transparent;
             color: {fg};
-            border: none;
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 12px;
+            border: 1px solid {fg};
+            padding: 1px 6px;
+            border-radius: 2px;
+            font-size: 9px;
             font-weight: 500;
+            letter-spacing: 0.2px;
         """)
+        badge.setFixedHeight(18)
         return badge
 
     def _create_button(self, text, style='secondary', fixed_width=None):

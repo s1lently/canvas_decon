@@ -22,7 +22,8 @@ class SettingsView:
 
     def show(self):
         """Show settings overlay"""
-        self._update_geometry()
+        # Make overlay fill entire parent window
+        self.sw.setGeometry(self.app.rect())
         self.sw.show()
         self.sw.raise_()
         self.refresh_tasks_table()
@@ -30,10 +31,6 @@ class SettingsView:
     def hide(self):
         """Hide settings overlay"""
         self.sw.hide()
-
-    def _update_geometry(self):
-        """Update geometry to match parent"""
-        self.sw.setGeometry(self.app.rect())
 
     # === LOGIN INFO ===
     def load_login_info(self):

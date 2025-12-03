@@ -33,6 +33,8 @@ class TaskCard(QFrame):
             }
         """)
         self.setFixedHeight(72)
+        self.setMinimumWidth(340)
+        self.setMaximumWidth(340)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
@@ -54,14 +56,15 @@ class TaskCard(QFrame):
         self.title_label = QLabel(name)
         self.title_label.setFont(QFont("Inter", 11, QFont.Weight.DemiBold))
         self.title_label.setStyleSheet("color: #ffffff; background: transparent;")
-        title_row.addWidget(self.title_label)
+        self.title_label.setWordWrap(False)
+        title_row.addWidget(self.title_label, 1)
 
-        title_row.addStretch()
-
-        # Speed badge
+        # Speed badge (fixed width to prevent stretching)
         self.speed_label = QLabel("")
         self.speed_label.setFont(QFont("Inter", 9))
         self.speed_label.setStyleSheet("color: #666666; background: transparent;")
+        self.speed_label.setFixedWidth(60)
+        self.speed_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         title_row.addWidget(self.speed_label)
 
         content.addLayout(title_row)
@@ -71,14 +74,15 @@ class TaskCard(QFrame):
         self.status_label = QLabel("Starting...")
         self.status_label.setFont(QFont("Inter", 10))
         self.status_label.setStyleSheet("color: #888888; background: transparent;")
-        status_row.addWidget(self.status_label)
+        self.status_label.setWordWrap(False)
+        status_row.addWidget(self.status_label, 1)
 
-        status_row.addStretch()
-
-        # Progress percentage
+        # Progress percentage (fixed width)
         self.progress_label = QLabel("0%")
         self.progress_label.setFont(QFont("Inter", 10, QFont.Weight.Bold))
         self.progress_label.setStyleSheet("color: #3b82f6; background: transparent;")
+        self.progress_label.setFixedWidth(45)
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignRight)
         status_row.addWidget(self.progress_label)
 
         content.addLayout(status_row)
@@ -420,3 +424,16 @@ class MissionControl(QWidget):
     def has_active_tasks(self):
         """是否有活跃任务"""
         return any(not card.is_done for card in self.tasks.values())
+
+    def cleanup(self):
+        """Clean up all tasks and callbacks for shutdown"""
+        self.callbacks.clear()
+        for card in list(self.tasks.values()):
+            card.setParent(None)
+            card.deleteLater()
+        self.tasks.clear()
+
+    def closeEvent(self, event):
+        """Handle close event"""
+        self.cleanup()
+        super().closeEvent(event)

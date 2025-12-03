@@ -1,5 +1,5 @@
 """Canvas LMS Automation - Main Application"""
-import sys, os, threading, subprocess, platform
+import sys, os, json, threading, subprocess, platform
 from datetime import datetime, timedelta
 from PyQt6.QtWidgets import (
     QMainWindow, QApplication, QStackedWidget, QWidget, QVBoxLayout,
@@ -94,16 +94,21 @@ class CanvasApp(QMainWindow):
         # === BINDINGS ===
         self._init_bindings()
 
-        # === STARTUP ===
+        # === WINDOW (show first for perceived speed) ===
+        self.setWindowTitle("Canvas LMS Automation")
+        self.resize(1200, 675)  # 3/4 of original size
+        self.installEventFilter(self)
+
+        # === DEFER HEAVY INIT (after window visible) ===
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(0, self._deferred_init)
+
+    def _deferred_init(self):
+        """Heavy initialization after window is shown"""
         self.dm.load_all()
         self._archive_past_todos()
         self.main_view.show_launcher()
         self._check_status()
-
-        # === WINDOW ===
-        self.setWindowTitle("Canvas LMS Automation")
-        self.resize(1200, 675)  # 3/4 of original size
-        self.installEventFilter(self)
 
     def _connect_signals(self):
         """Connect all signals to slots"""
@@ -358,7 +363,7 @@ class CanvasApp(QMainWindow):
 
         # Settings overlay
         sw.backBtn.clicked.connect(self.settings_view.hide)
-        sw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(sw.accountInput, sw.passwordInput, sw.keyInput, self.stacked_widget, mw, self.manual_mode_toggle))
+        sw.submitBtn.clicked.connect(lambda: qt_interact.on_submit_clicked(sw.accountInput, sw.passwordInput, sw.keyInput, self.stacked_widget, self, self.manual_mode_toggle))
         sw.saveApiBtn.clicked.connect(self.settings_view.save_api_key)
         sw.savePrefBtn.clicked.connect(lambda: self.settings_view.save_preference(sw.baseUrlInput.text()))
         sw.refreshTasksBtn.clicked.connect(self.settings_view.refresh_tasks_table)
@@ -452,28 +457,56 @@ class CanvasApp(QMainWindow):
             pass
 
     def _check_status(self):
-        """Initial status check"""
+        """Initial status check (non-blocking)"""
         from gui._internal import utilQtInteract
-        if os.path.exists(config.COOKIES_FILE):
-            age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(config.COOKIES_FILE))
-            if age > timedelta(hours=24):
-                print("[INFO] Cookies expired, auto-refreshing...")
+        from gui._internal.mgrPreferences import get_preferences
+
+        prefs = get_preferences()
+
+        # Check if we have valid credentials (fast, local check)
+        def has_valid_credentials():
+            if os.path.exists(config.ACCOUNT_CONFIG_FILE):
+                try:
+                    with open(config.ACCOUNT_CONFIG_FILE) as f:
+                        data = json.load(f)
+                        return all([data.get('account'), data.get('password'), data.get('otp_key')])
+                except:
+                    pass
+            return False
+
+        # Quick local status (no network)
+        has_cookie = os.path.exists(config.COOKIES_FILE)
+        has_courses = os.path.exists(config.COURSE_FILE)
+
+        # Auto-fetch cookie if enabled (local file age check only)
+        if prefs.get('auto_fetch_cookie', True) and has_valid_credentials():
+            if has_cookie:
+                age = datetime.now() - datetime.fromtimestamp(os.path.getmtime(config.COOKIES_FILE))
+                if age > timedelta(hours=24):
+                    print("[INFO] Cookies expired, auto-refreshing...")
+                    utilQtInteract.on_get_cookie_clicked(None, self)
+            else:
+                print("[INFO] No cookie found, auto-fetching...")
                 utilQtInteract.on_get_cookie_clicked(None, self)
 
-        self._update_status()
+        # Quick UI update (local checks only)
         self._update_user_info()
 
-        status = checkStatus.get_all_status()
-        if status['cookie'] == 1:
-            if status['courses'] == 0:
+        # Auto-fetch based on local file existence
+        if has_cookie:
+            if prefs.get('auto_fetch_courses', True) and not has_courses:
                 utilQtInteract.on_get_course_clicked(None, self)
-            utilQtInteract.on_get_todo_clicked(None, self)
+            if prefs.get('auto_fetch_todos', True):
+                utilQtInteract.on_get_todo_clicked(None, self)
 
+        # Background thread for full status check (with network)
         threading.Thread(target=self._status_daemon, daemon=True).start()
 
     def _status_daemon(self):
         """Background status update"""
         import time
+        # Immediate first update
+        self.signals.status_update.emit()
         while True:
             time.sleep(30)
             self.signals.status_update.emit()
@@ -558,11 +591,41 @@ class CanvasApp(QMainWindow):
              'Linux': lambda: subprocess.run(['xdg-open', path])
             }.get(platform.system(), lambda: None)()
 
+    def closeEvent(self, event):
+        """Clean up resources on close"""
+        # Cleanup Mission Control (clear tasks and callbacks)
+        if hasattr(self, 'mission_control') and self.mission_control:
+            self.mission_control.cleanup()
+            self.mission_control.close()
+
+        # Stop settings refresh timer
+        if hasattr(self, 'settings_view') and self.settings_view:
+            self.settings_view.tasks_refresh_timer.stop()
+
+        # Accept the close event
+        event.accept()
+
+        # Force quit the application
+        QApplication.quit()
+
 
 def main():
     """Entry point"""
+    import signal
+    import os as _os
+    from PyQt6.QtCore import QTimer
+
     app = QApplication(sys.argv)
     window = CanvasApp()
+
+    # Force immediate exit on Ctrl+C (no cleanup, just die)
+    signal.signal(signal.SIGINT, lambda *args: _os._exit(0))
+
+    # Timer to let Python handle signals (must run Python code periodically)
+    timer = QTimer()
+    timer.timeout.connect(lambda: None)
+    timer.start(50)  # 50ms interval
+
     window.show()
     sys.exit(app.exec())
 

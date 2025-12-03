@@ -31,6 +31,7 @@ COURSE_FILE = os.path.join(JSONS_DIR, 'course.json')
 TODOS_FILE = os.path.join(JSONS_DIR, 'todos.json')
 HIS_TODO_FILE = os.path.join(JSONS_DIR, 'his_todo.json')
 LEARN_PREFERENCES_FILE = os.path.join(JSONS_DIR, 'learn_preferences.json')
+PREFERENCES_FILE = os.path.join(JSONS_DIR, 'preferences.json')
 DONE_FILE = os.path.join(JSONS_DIR, 'Done.txt')
 
 # TODO 工作目录 (统一自动化工作空间)

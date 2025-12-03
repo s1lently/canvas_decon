@@ -315,6 +315,9 @@ class TodoItemDelegate(QStyledItemDelegate):
             s.setHeight(max(s.height(), 60))  # Taller cards for launcher
         else:
             s.setHeight(max(s.height(), 36))
+        # Use full available width - no width constraint on cards
+        if hasattr(opt, 'rect'):
+            s.setWidth(opt.rect.width())
         return s
 
 
@@ -397,7 +400,15 @@ class ToastNotification(QWidget):
         self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.text_label = QLabel()
-        self.text_label.setFont(QFont('Inter, -apple-system, BlinkMacSystemFont, "Segoe UI"', 13, QFont.Weight.Medium))
+        # Use platform-appropriate font (Segoe UI on Windows, SF Pro on macOS)
+        import sys
+        if sys.platform == 'win32':
+            toast_font = QFont('Segoe UI', 13, QFont.Weight.Medium)
+        elif sys.platform == 'darwin':
+            toast_font = QFont('.AppleSystemUIFont', 13, QFont.Weight.Medium)
+        else:
+            toast_font = QFont('Arial', 13, QFont.Weight.Medium)
+        self.text_label.setFont(toast_font)
 
         self.container_layout.addWidget(self.icon_label)
         self.container_layout.addWidget(self.text_label)

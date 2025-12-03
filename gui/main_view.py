@@ -19,6 +19,10 @@ class MainView:
         self.mw = app.main_window
         self.lo = app.launcher_overlay
 
+    def load_data(self):
+        """Reload data from files"""
+        self.app.dm.load_all()
+
     # === LAUNCHER ===
     def show_launcher(self):
         """Show launcher overlay"""

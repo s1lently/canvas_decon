@@ -1,11 +1,15 @@
 """Settings View - Settings Overlay (merged from handlers/sitting.py)"""
 import sys, os, json
 from io import StringIO
-from PyQt6.QtWidgets import QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout, QLabel, QTextEdit, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import (QMessageBox, QTableWidgetItem, QDialog, QVBoxLayout,
+                              QLabel, QTextEdit, QPushButton, QHBoxLayout, QWidget, QFrame)
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import config
+from gui.widgets import IOSToggle
+from gui._internal.mgrPreferences import get_preferences
 
 
 class SettingsView:
@@ -14,11 +18,15 @@ class SettingsView:
     def __init__(self, app):
         self.app = app
         self.sw = app.settings_overlay
+        self.pref_toggles = {}  # Store toggle references
 
         # Auto-refresh timer for tasks table (300ms)
         self.tasks_refresh_timer = QTimer()
         self.tasks_refresh_timer.timeout.connect(self.refresh_tasks_table)
         self.tasks_refresh_timer.start(300)
+
+        # Setup preferences UI (call after UI is loaded)
+        QTimer.singleShot(100, self._setup_preferences_ui)
 
     def show(self):
         """Show settings overlay"""
@@ -276,3 +284,86 @@ class SettingsView:
 
         dialog.setLayout(layout)
         dialog.exec()
+
+    # === PREFERENCES ===
+    def _setup_preferences_ui(self):
+        """Setup preferences toggles in the Preference tab"""
+        from PyQt6.QtWidgets import QScrollArea
+
+        prefs = get_preferences()
+
+        # Find the preference tab's form layout
+        pref_layout = self.sw.prefFormLayout
+
+        # Add separator
+        sep = QFrame()
+        sep.setFixedHeight(1)
+        sep.setStyleSheet("background-color: #444;")
+        pref_layout.addWidget(sep)
+
+        # Add title for auto-fetch section
+        title = QLabel("Auto-Fetch Settings")
+        title.setStyleSheet("font-size: 16px; font-weight: bold; color: #3b82f6; margin-top: 16px;")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pref_layout.addWidget(title)
+
+        # Toggle definitions: (key, label, description)
+        toggles = [
+            ('auto_fetch_cookie', 'Auto-fetch Cookie',
+             'Automatically fetch cookie after saving valid credentials'),
+            ('auto_fetch_todos', 'Auto-fetch TODOs',
+             'Automatically fetch TODOs on startup if cookie exists'),
+            ('auto_fetch_courses', 'Auto-fetch Courses',
+             'Automatically fetch courses after cookie is obtained'),
+            ('auto_fetch_syllabus', 'Auto-fetch Syllabus',
+             'Automatically fetch syllabus after courses are fetched'),
+        ]
+
+        for key, label, desc in toggles:
+            row = self._create_toggle_row(key, label, desc, prefs.get(key, False))
+            pref_layout.addWidget(row)
+
+        # Add stretch at the end
+        pref_layout.addStretch()
+
+    def _create_toggle_row(self, key, label, description, initial_value):
+        """Create a toggle row widget"""
+        container = QWidget()
+        container.setStyleSheet("""
+            QWidget { background: rgba(255, 255, 255, 0.03); border-radius: 8px; }
+        """)
+        container.setMinimumWidth(500)
+        container.setMaximumWidth(500)
+        container.setMinimumHeight(60)
+
+        layout = QHBoxLayout(container)
+        layout.setContentsMargins(16, 12, 16, 12)
+
+        # Left side: label and description
+        text_layout = QVBoxLayout()
+        text_layout.setSpacing(4)
+
+        label_widget = QLabel(label)
+        label_widget.setStyleSheet("font-size: 14px; color: #e0e0e0; font-weight: 600; background: transparent;")
+
+        desc_widget = QLabel(description)
+        desc_widget.setStyleSheet("font-size: 11px; color: #888; background: transparent;")
+        desc_widget.setWordWrap(True)
+
+        text_layout.addWidget(label_widget)
+        text_layout.addWidget(desc_widget)
+        layout.addLayout(text_layout, 1)
+
+        # Right side: toggle
+        toggle = IOSToggle(width=50, height=26)
+        toggle.setChecked(initial_value)
+        toggle.stateChanged.connect(lambda state: self._on_pref_toggle_changed(key, state))
+        layout.addWidget(toggle)
+
+        self.pref_toggles[key] = toggle
+        return container
+
+    def _on_pref_toggle_changed(self, key, state):
+        """Handle preference toggle change"""
+        prefs = get_preferences()
+        prefs.set(key, state == Qt.CheckState.Checked.value)

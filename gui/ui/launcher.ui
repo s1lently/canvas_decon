@@ -92,12 +92,6 @@
      </item>
      <item>
       <widget class="QListWidget" name="todoList">
-       <property name="minimumSize">
-        <size>
-         <width>450</width>
-         <height>0</height>
-        </size>
-       </property>
       </widget>
      </item>
     </layout>
@@ -106,13 +100,13 @@
     <widget class="QWidget" name="centerPanel" native="true">
      <property name="minimumSize">
       <size>
-       <width>380</width>
+       <width>340</width>
        <height>0</height>
       </size>
      </property>
      <property name="maximumSize">
       <size>
-       <width>420</width>
+       <width>380</width>
        <height>16777215</height>
       </size>
      </property>
@@ -318,12 +312,6 @@ QPushButton#settingsBtn:hover {
      </item>
      <item>
       <widget class="QListWidget" name="courseList">
-       <property name="minimumSize">
-        <size>
-         <width>450</width>
-         <height>0</height>
-        </size>
-       </property>
        <property name="styleSheet">
         <string notr="true">QListWidget#courseList {
     background: transparent;

@@ -24,8 +24,20 @@ def on_get_cookie_clicked(tw, mw=None):
 
     def on_success():
         if mw:
-            mw.update_status()
+            mw._update_status()
             mw.show_toast("Cookie Updated!", 'success')
+
+            # Auto-fetch TODOs and Courses after cookie is obtained
+            from gui._internal.mgrPreferences import get_preferences
+            prefs = get_preferences()
+
+            if prefs.get('auto_fetch_todos', True):
+                print("[INFO] Auto-fetching TODOs...")
+                on_get_todo_clicked(None, mw)
+
+            if prefs.get('auto_fetch_courses', True):
+                print("[INFO] Auto-fetching Courses...")
+                on_get_course_clicked(None, mw)
 
     mw.mission_control.start_task("Getting Cookie", run, on_success=on_success)
 
@@ -47,6 +59,9 @@ def on_get_todo_clicked(tw, mw=None):
         if mw:
             mw.main_view.load_data()
             mw.main_view.on_category_changed(mw.main_window.categoryList.currentRow())
+            # Refresh launcher todoList if visible
+            if hasattr(mw, 'launcher_overlay') and mw.launcher_overlay.isVisible():
+                mw.main_view._populate_launcher()
             mw.show_toast("TODOs Updated!", 'success')
 
     # Task 2: Fetch History
@@ -77,8 +92,16 @@ def on_get_course_clicked(tw, mw=None):
     def on_success():
         if mw:
             mw.main_view.load_data()
-            mw.update_status()
+            mw._update_status()
             mw.show_toast("Courses Updated!", 'success')
+
+            # Auto-fetch Syllabus after courses are fetched
+            from gui._internal.mgrPreferences import get_preferences
+            prefs = get_preferences()
+
+            if prefs.get('auto_fetch_syllabus', False):
+                print("[INFO] Auto-fetching Syllabus...")
+                on_gsyll_all_clicked(None, mw)
 
     mw.mission_control.start_task("Fetching Courses", run, on_success=on_success)
 
@@ -160,10 +183,11 @@ def on_clean_clicked(tw, mw=None):
 def on_back_clicked(sw, mw):
     sw.setCurrentWidget(mw)
 
-def on_submit_clicked(ai, pi, ki, sw, mw, manual_mode_toggle=None):
+def on_submit_clicked(ai, pi, ki, sw, app, manual_mode_toggle=None):
     """Save account info - allows partial updates (any field can be updated independently)
 
     Args:
+        app: CanvasApp instance (for auto-fetch and navigation)
         manual_mode_toggle: IOSToggle for manual 2FA mode (optional)
     """
     try:
@@ -215,7 +239,21 @@ def on_submit_clicked(ai, pi, ki, sw, mw, manual_mode_toggle=None):
         if password: pi.clear()
         if otp_key: ki.clear()
 
-        sw.setCurrentWidget(mw)
+        # Navigate back to main window
+        if app and hasattr(app, 'main_window'):
+            sw.setCurrentWidget(app.main_window)
+
+        # Auto-fetch cookie if enabled and credentials are complete
+        from gui._internal.mgrPreferences import get_preferences
+        prefs = get_preferences()
+        if prefs.get('auto_fetch_cookie', True):
+            # Check if we have complete credentials
+            has_account = config_data.get('account')
+            has_password = config_data.get('password')
+            has_otp = config_data.get('otp_key')
+            if has_account and has_password and has_otp:
+                print("[INFO] Auto-fetching cookie (credentials complete)...")
+                on_get_cookie_clicked(None, app)
     except Exception as e:
         print(f"[ERROR] Save failed: {e}")
 

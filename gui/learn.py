@@ -665,7 +665,7 @@ class LearnSittingWidget(QWidget):
         subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', folder])
 
     def on_decon_textbook(self):
-        self.canvas_app.course_view.on_decon_textbook_clicked()
+        self.canvas_app.course_view.on_decon_textbook()
 
     def on_load_from_decon(self):
         from gui._internal.utilQtInteract import on_load_from_decon_clicked
